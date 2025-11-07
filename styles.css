@@ -1,0 +1,31 @@
+/* styles.css */
+body {
+  background-image: url('background_website.jpg');
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  backdrop-filter: blur(0.5px);
+  background: rgba(248, 250, 252, 0.35);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* all content sitings above the veil */
+.layer {
+  position: relative;
+  z-index: 1;
+}
+
+/* reusable nav button */
+.btn-nav {
+  @apply block w-full text-left px-4 py-2 rounded-xl border border-gray-300
+         bg-white/70 backdrop-blur hover:bg-white/90 transition shadow-sm;
+}

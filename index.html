@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Summary Association Statistics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- code for styles for all pages -->
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <!-- Fixed top bar for all pages -->
+    <header class="fixed inset-x-0 top-0 z-50 bg-[#004a6f]">
+        <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-between">
+            <img src="ukhd_logo.jpg" alt="logo" class="h-8 w-auto bg-white/70 backdrop-blur shadow-sm select-none" />
+            <span
+                class="rounded-xl bg-white/70 backdrop-blur px-3 py-1 text-xs font-medium shadow-sm select-none text-center">
+                ENG
+            </span>
+        </div>
+    </header>
+
+    <!-- Page Content -->
+    <main class="layer max-w-8xl mx-auto px-16 lg:px-12 min-h-screen flex flex-col pt-16">
+        <div class="grid grid-cols-12 gap-6 mt-10 flex-grow">
+            <!-- nav Sidebar navigation -->
+            <nav class="col-span-3 sm:col-span-2 md:col-span-1 mt-6">
+                <ul class="space-y-3">
+                    <li><a class="btn-nav block w-full text-left px-4 py-2 rounded-xl border border-gray-500 bg-white/70 backdrop-blur hover:bg-white/90 transition shadow-sm"
+                            href="index.html">Home</a></li>
+                    <li><a class="btn-nav block w-full text-left px-4 py-2 rounded-xl border border-gray-500 bg-white/70 backdrop-blur hover:bg-white/90 transition shadow-sm"
+                            href="data.html">Data</a></li>
+                    <li><a class="btn-nav block w-full text-left px-4 py-2 rounded-xl border border-gray-500 bg-white/70 backdrop-blur hover:bg-white/90 transition shadow-sm"
+                            href="sources.html">Sources</a></li>
+                    <li><a class="btn-nav block w-full text-left px-4 py-2 rounded-xl border border-gray-500 bg-white/70 backdrop-blur hover:bg-white/90 transition shadow-sm"
+                            href="contact.html">Contact</a></li>
+                    <li><a class="btn-nav block w-full text-left px-4 py-2 rounded-xl border border-gray-500 bg-white/70 backdrop-blur hover:bg-white/90 transition shadow-sm"
+                            href="about.html">About</a></li>
+                </ul>
+            </nav>
+
+            <!--Pages: -->
+            <section
+                class="col-span-9 sm:col-span-10 md:col-span-11 flex items-center justify-center text-center mt-12">
+                <h1 class="font-extrabold leading-tight text-[#004a6f] drop-shadow" style="font-size:min(60vw,120px)">
+                    <span class="block">Summary</span>
+                    <span class="block">Association</span>
+                    <span class="block">Statistics</span>
+                </h1>
+            </section>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-auto text-center text-xs text-gray-800/80 py-4">
+            © <span id="year"></span> Summary Association Statistics
+        </footer>
+    </main>
+
+    <!-- JS to highlight current page -->
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+        const path = location.pathname.split('/').pop() || 'index.html';
+        document.querySelectorAll('a[href]').forEach(a => {
+            if (a.getAttribute('href') === path) {
+                a.classList.add('ring-2', 'ring-[#004a6f]', 'border-[#004a6f]');
+            }
+        });
+    </script>
+</body>
+
+</html>

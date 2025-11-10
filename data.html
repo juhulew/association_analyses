@@ -46,37 +46,40 @@
             <!--Pages: -->
             <section
                 class="col-span-8 sm:col-span-9 md:col-span-10 rounded-xl bg-white/40 backdrop-blur border border-gray-500 mt-6 mx-6 shadow-sm">
-                <h2 class="text-4xl font-medium leading-tight text-[#004a6f] drop-shadow px-6">Trying out some data:
-                </h2>
+                <h2 class="text-4xl font-medium leading-tight text-[#004a6f] drop-shadow px-6">Trying out my data:</h2>
 
-                <!-- controls: -->
-                <div class="p-6 grid gap-3 sm:grid-cols-3">
-                    <label class="text-sm">
-                        <span class="block mb-1 font-medium text-gray-700">Select group:</span>
-                        <select id="groupSelect" class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white/90">
-                            <option value="ALL" selected>ALL</option>
-                        </select>
-                    </label>
+                <div class="p-6 grid gap-6">
+                    <div id="statsCards" class="grid gap-4 sm:grid-cols-3"></div>
+                    <div>
+                        <h3 class="text-xl font-semibold text-[#004a6f] mb-2">Manhattan</h3>
+                        <div id="manhattan-plot" class="rounded-xl border border-gray-300 bg-white/70 backdrop-blur">
+                        </div>
+                    </div>
 
-                    <label class="text-sm">
-                        <span class="block mb-1 font-medium text-gray-700">Select x-variable:</span>
-                        <select id="xSelect" class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white/90">
-                            <option value="x" selected>Variable x</option>
-                            <option value="y">Variable y</option>
-                        </select>
-                    </label>
+                    <div class="grid gap-6 sm:grid-cols-2">
+                        <div>
+                            <h3 class="text-xl font-semibold text-[#004a6f] mb-2">QQ plot</h3>
+                            <div id="" qq-plot" class="rounded-xl border border-gray-300 bg-white/70 backdrop-blur">
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-semibold text-[#004a6f] mb-2">MAF distribution</h3>
+                            <div id="maf-plot" class="rounded-xl border border-gray-300 bg-white/70 backdrop-blur">
+                            </div>
+                        </div>
+                    </div>
 
-                    <label class="text-sm">
-                        <span class="block mb-1 font-medium text-gray-700">Select y-Variable:</span>
-                        <select id="ySelect" class="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white/90">
-                            <option value="x">Variable x</option>
-                            <option value="y"selected>Var y</option>
-                        </select>
-                    </label>
+                    <div>
+                        <h3 class="text-xl font-semibold text-[#004a6f] mb-2">effect size (log OR with 95% CI)</h3>
+                        <div id="effect-plot" class="rounded-xl border border-gray-300 bg-white/70 backdrop-blur"></div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-xl font-semibold text-[#004a6f] mb-2">P-value top 10</h3>
+                        <div id="pval-top10-plot" class="rounded-xl border border-gray-300 bg-white/70 backdrop-blur">
+                        </div>
+                    </div>
                 </div>
-
-                <!-- plot -->
-                <div id="plot" class="px-6 rounded-xl border border-gray-300 bg-white/70 backdrop-blur mx-6 mt-9"></div>
             </section>
         </div>
 
@@ -91,6 +94,124 @@
         document.getElementById('year').textContent = new Date().getFullYear();
 
         //load data
+
+        let RES = null;
+
+        async function loadResults() {
+            try {
+                const res = await fetch('assets/ma_rsults_fish1011.json', { cache: 'no-store' });
+                if (!res.ok) throw new Error('HTTP ${res.status}');
+                RES = await res.json();
+                renderAllPlots();
+            } catch (error) {
+                console.error('Failed to load ma_results_fish1011.json:', error);
+                ['manhattan-plot', 'qq-plot', 'maf-plot', 'effect-plot', 'pval-top10-plot'].forEach(id => {
+                    const plot = document.getElementById(id);
+                    if (plot) plot.innerHTML = '<div class="p-4 text-red-800">Failed to load data.</div>';
+                });
+            }
+        }
+
+        function renderAllPlots() {
+            renderStats();
+            renderManhattan();
+            renderQQ();
+            renderMAF();
+            renderEffects();
+            renderPvalTop10();
+        }
+
+        //small ui cards
+        function renderStats() {
+            const wrap = document.getElementById('statsCards');
+            if (!wrap || !RES?.stats) return;
+            const items = [
+                { label: 'SNPs', value: RES.stats.n_snps },
+                { label: 'Min p', value: Number(RES.stats.min_p).toExponential(2) },
+                { label: 'Median MAF', value: RES.stats.median_maf?.toFixed(3) }
+            ];
+            wrap.innerHTML = items.map(i => `
+                <div class="bg-white/70 backdrop-blur rounded-xl p-4 shadow-sm border border-gray-300 text-center">
+                    <div class="text-2xl font-semibold text-[#004a6f]">${i.value ?? '-'}</div>
+                    <div class="text-sm text-gray-700 mt-1">${i.label}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderManhattan() {
+            const plotDiv = document.getElementById('manhattan-plot');
+            if (!plotDiv || !RES?.manhatten) return;
+
+            const data = RES.manhatten;
+            const chromosomes = {};
+            data.forEach(d => {
+                const chr = String(d.chr);
+                (chromosomes[chr] ||= []).push(d);
+            });
+            const traces = Object.keys(chromosomes).sort((a, b) => naturalChrSort(a, b)).map((chr, i) => {
+                const arr = chromosomes[chr].sort((a, b) => (a.pos_cum ?? a.position) - (b.pos_cum ?? b.position));
+                return {
+                    x: arr.map(d => d.pos_cum ?? d.position),
+                    y: arr.map(d => d.neglog10p),
+                    mode: 'markers',
+                    type: 'scattergl',
+                    name: `Chr ${chr}`,
+                    marker: {
+                        color: i % 2 === 0 ? '#004a6f' : '#007bb3',
+                        size: 4,
+                        opacity: 0.7
+                    },
+                    text: arr.map(d => `chr: ${d.chr}, pos: ${d.position}, pval: ${d.pval}`)
+                };
+            });
+
+            const maxX = Math.max(...RES.results.map(d => d.pos_cum ?? d.position));
+            const layout = {
+                height: 380,
+                margin: { t: 20, r: 10, b: 50, l: 55 },
+                xaxis: { title: 'Genomic position', range: [0, maxX] },
+                yaxis: { title: '-log10(p)' },
+                hovermode: 'closest',
+                plot_bgcolor: 'rgba(255,255,255,0)',
+                paper_bgcolor: 'rgba(255,255,255,0)',
+                legend: { orientation: 'h', y: -0.2 }
+            };
+
+            Plotly.newPlot(el, traces, layout, { responsive: true, displayModeBar: true });
+        }
+
+        function naturalChrSort(a, b) {
+            //handle numeric x, y, mt ordering
+            const toKey = x => {
+                const s = String(x).toUpperCase();
+                if (s === 'X') return 23;
+                if (s === 'Y') return 24;
+                if (s === 'MT' || s === 'M') return 25;
+                const n = parseInt(s, 10);
+                return isNaN(n) ? 26 : n;
+            };
+            return toKey(a) - toKey(b);
+        }
+
+        function renderQQ() {
+
+        }
+
+        function renderMAF() {
+
+        }
+
+        function renderEffects() {
+
+        }
+
+        function renderPvalTop10() {
+
+        }
+
+        loadResults();
+
+        /*
         let raw = [];
         async function loadData() {
             try {
@@ -153,15 +274,16 @@
         });
 
         loadData();
+*/
 
-
-        <!-- JS to highlight current page -->
+        // JS to highlight current page
         const path = location.pathname.split('/').pop() || 'index.html';
         document.querySelectorAll('a[href]').forEach(a => {
             if (a.getAttribute('href') === path) {
                 a.classList.add('ring-2', 'ring-[#004a6f]', 'border-[#004a6f]');
             }
         });
+
     </script>
 </body>
 

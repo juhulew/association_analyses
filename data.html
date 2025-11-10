@@ -93,18 +93,84 @@
     <script>
         document.getElementById('year').textContent = new Date().getFullYear();
 
-        //load data
-
         let RES = null;
+        let RAW = []; // normalized SNP rows
 
         async function loadResults() {
             try {
-                const res = await fetch('assets/ma_rsults_fish1011.json', { cache: 'no-store' });
-                if (!res.ok) throw new Error('HTTP ${res.status}');
+                const url = 'assets/MA_results_fish1011.json'; // make sure path & case match
+                const res = await fetch(url, { cache: 'no-store' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 RES = await res.json();
+
+                // ---- find the primary table ----
+                // Supports: {results:[...]}, {manhattan:[...]}, {manhatten:[...]}, or a plain array
+                const table =
+                    (Array.isArray(RES) && RES) ||
+                    RES.results ||
+                    RES.manhattan ||
+                    RES.manhatten ||
+                    [];
+
+                console.log('Loaded JSON keys:', Array.isArray(RES) ? ['<array>'] : Object.keys(RES));
+                console.log('Primary table length:', table.length);
+                if (!Array.isArray(table) || table.length === 0) {
+                    console.warn('No rows found in results/manhattan/manhatten/top-level array.');
+                }
+
+                // ---- normalize into RAW ----
+                RAW = table.map(d => {
+                    const p = d.p_value ?? d.pval ?? d.p;       // accept different p-field names
+                    const chr = d.chr ?? d.chrom ?? d.chromosome;
+                    const pos = d.position ?? d.pos;
+                    return {
+                        SNP: d.SNP ?? null,
+                        chr: chr != null ? String(chr) : '',
+                        position: Number(pos),
+                        p: Number(p),
+                        posCum: Number.isFinite(d.pos_cum) ? Number(d.pos_cum) : null,
+                        neglog: Number.isFinite(d.neglog10p) ? Number(d.neglog10p) : null,
+                        MAF: (d.MAF != null ? Number(d.MAF) : null),
+                        OR: (d.OR != null ? Number(d.OR) : null),
+                        CI_low: (d.CI_low != null ? Number(d.CI_low) : null),
+                        CI_high: (d.CI_high != null ? Number(d.CI_high) : null)
+                    };
+                }).filter(r => r.chr && Number.isFinite(r.position) && Number.isFinite(r.p));
+
+                console.log('Usable rows after normalization:', RAW.length);
+                if (!RAW.length) throw new Error('No usable rows (missing chr/position/p).');
+
+                // ---- compute helpers if needed ----
+                if (RAW.some(r => r.posCum == null)) {
+                    const chrOrder = Array.from(new Set(RAW.map(r => r.chr))).sort(naturalChrSort);
+                    const maxPerChr = new Map(chrOrder.map(c => [c, Math.max(...RAW.filter(r => r.chr === c).map(r => r.position))]));
+                    let offset = 0;
+                    const chrOffset = new Map();
+                    chrOrder.forEach(c => { chrOffset.set(c, offset); offset += maxPerChr.get(c) || 0; });
+                    RAW.forEach(r => { if (r.posCum == null) r.posCum = (chrOffset.get(r.chr) || 0) + r.position; });
+                }
+                if (RAW.some(r => r.neglog == null)) {
+                    RAW.forEach(r => { if (r.neglog == null && r.p > 0 && r.p <= 1) r.neglog = -Math.log10(r.p); });
+                }
+
+                // ---- fallback stats if missing ----
+                if (!RES.stats) {
+                    const pVals = RAW.map(r => r.p).filter(Number.isFinite);
+                    const mafVals = RAW.map(r => r.MAF).filter(Number.isFinite).sort((a, b) => a - b);
+                    const medMAF = mafVals.length
+                        ? (mafVals.length % 2 ? mafVals[(mafVals.length - 1) / 2]
+                            : (mafVals[mafVals.length / 2 - 1] + mafVals[mafVals.length / 2]) / 2)
+                        : null;
+                    RES.stats = {
+                        n_snps: RAW.length,
+                        min_p: pVals.length ? Math.min(...pVals) : null,
+                        median_maf: medMAF
+                    };
+                }
+
                 renderAllPlots();
             } catch (error) {
-                console.error('Failed to load ma_results_fish1011.json:', error);
+                console.error('Failed to load/parse results JSON:', error);
                 ['manhattan-plot', 'qq-plot', 'maf-plot', 'effect-plot', 'pval-top10-plot'].forEach(id => {
                     const plot = document.getElementById(id);
                     if (plot) plot.innerHTML = '<div class="p-4 text-red-800">Failed to load data.</div>';
@@ -115,61 +181,53 @@
         function renderAllPlots() {
             renderStats();
             renderManhattan();
-            renderQQ();
-            renderMAF();
-            renderEffects();
-            renderPvalTop10();
+            // renderQQ(); renderMAF(); renderEffects(); renderPvalTop10();
         }
 
-        //small ui cards
         function renderStats() {
             const wrap = document.getElementById('statsCards');
-            if (!wrap || !RES?.stats) return;
+            if (!wrap) return;
+            const s = RES?.stats || {};
             const items = [
-                { label: 'SNPs', value: RES.stats.n_snps },
-                { label: 'Min p', value: Number(RES.stats.min_p).toExponential(2) },
-                { label: 'Median MAF', value: RES.stats.median_maf?.toFixed(3) }
+                { label: 'SNPs', value: s.n_snps ?? RAW.length ?? 0 },
+                { label: 'Min p', value: (s.min_p != null && isFinite(s.min_p)) ? Number(s.min_p).toExponential(2) : '—' },
+                { label: 'Median MAF', value: (s.median_maf != null) ? Number(s.median_maf).toFixed(3) : '—' }
             ];
             wrap.innerHTML = items.map(i => `
-                <div class="bg-white/70 backdrop-blur rounded-xl p-4 shadow-sm border border-gray-300 text-center">
-                    <div class="text-2xl font-semibold text-[#004a6f]">${i.value ?? '-'}</div>
-                    <div class="text-sm text-gray-700 mt-1">${i.label}</div>
-                </div>
-            `).join('');
+    <div class="bg-white/70 backdrop-blur rounded-xl p-4 shadow-sm border border-gray-300 text-center">
+      <div class="text-2xl font-semibold text-[#004a6f]">${i.value}</div>
+      <div class="text-sm text-gray-700 mt-1">${i.label}</div>
+    </div>
+  `).join('');
         }
 
         function renderManhattan() {
             const plotDiv = document.getElementById('manhattan-plot');
-            if (!plotDiv || !RES?.manhatten) return;
+            if (!plotDiv) return;
+            if (!RAW.length) { plotDiv.innerHTML = '<div class="p-4">No SNP rows found.</div>'; return; }
 
-            const data = RES.manhatten;
-            const chromosomes = {};
-            data.forEach(d => {
-                const chr = String(d.chr);
-                (chromosomes[chr] ||= []).push(d);
-            });
-            const traces = Object.keys(chromosomes).sort((a, b) => naturalChrSort(a, b)).map((chr, i) => {
-                const arr = chromosomes[chr].sort((a, b) => (a.pos_cum ?? a.position) - (b.pos_cum ?? b.position));
+            const byChr = new Map();
+            RAW.forEach(d => { (byChr.get(d.chr) || byChr.set(d.chr, []).get(d.chr)).push(d); });
+
+            const traces = Array.from(byChr.keys()).sort(naturalChrSort).map((chr, i) => {
+                const arr = byChr.get(chr).slice().sort((a, b) => a.posCum - b.posCum);
                 return {
-                    x: arr.map(d => d.pos_cum ?? d.position),
-                    y: arr.map(d => d.neglog10p),
+                    x: arr.map(d => d.posCum),
+                    y: arr.map(d => d.neglog),
+                    text: arr.map(d => `${d.SNP ?? ''}<br>chr ${d.chr}:${d.position}<br>p=${d.p}`),
+                    hovertemplate: '%{text}<extra></extra>',
                     mode: 'markers',
                     type: 'scattergl',
-                    name: `Chr ${chr}`,
-                    marker: {
-                        color: i % 2 === 0 ? '#004a6f' : '#007bb3',
-                        size: 4,
-                        opacity: 0.7
-                    },
-                    text: arr.map(d => `chr: ${d.chr}, pos: ${d.position}, pval: ${d.pval}`)
+                    name: `chr ${chr}`,
+                    marker: { size: 5, opacity: 0.8 }
                 };
             });
 
-            const maxX = Math.max(...RES.results.map(d => d.pos_cum ?? d.position));
+            const maxX = Math.max(...RAW.map(d => d.posCum));
             const layout = {
                 height: 380,
                 margin: { t: 20, r: 10, b: 50, l: 55 },
-                xaxis: { title: 'Genomic position', range: [0, maxX] },
+                xaxis: { title: 'Genomic position (cumulative)', range: [0, maxX] },
                 yaxis: { title: '-log10(p)' },
                 hovermode: 'closest',
                 plot_bgcolor: 'rgba(255,255,255,0)',
@@ -177,13 +235,12 @@
                 legend: { orientation: 'h', y: -0.2 }
             };
 
-            Plotly.newPlot(el, traces, layout, { responsive: true, displayModeBar: true });
+            Plotly.newPlot(plotDiv, traces, layout, { responsive: true, displayModeBar: true });
         }
 
         function naturalChrSort(a, b) {
-            //handle numeric x, y, mt ordering
-            const toKey = x => {
-                const s = String(x).toUpperCase();
+            const toKey = s => {
+                s = String(s).toUpperCase();
                 if (s === 'X') return 23;
                 if (s === 'Y') return 24;
                 if (s === 'MT' || s === 'M') return 25;
@@ -193,98 +250,9 @@
             return toKey(a) - toKey(b);
         }
 
-        function renderQQ() {
-
-        }
-
-        function renderMAF() {
-
-        }
-
-        function renderEffects() {
-
-        }
-
-        function renderPvalTop10() {
-
-        }
-
-        loadResults();
-
-        /*
-        let raw = [];
-        async function loadData() {
-            try {
-                const res = await fetch('assets/data.json');
-                if (!res.ok) throw new Error('HTTP ${res.status}');
-                raw = await res.json();
-
-                //populate group select
-                const groups = Array.from(new Set(raw.map(d => d.group))).sort();
-                const sel = document.getElementById('groupSelect');
-                groups.forEach(g => {
-                    const option = document.createElement('option');
-                    option.value = g;
-                    option.textContent = g;
-                    sel.appendChild(option);
-                });
-                draw();
-            } catch (error) {
-                console.error('Failed to load data.json:', error);
-                const plot = document.getElementById('plot');
-                if (plot) plot.innerHTML = '<div class="text-red-800">Failed to load data.</div>';
-            }
-        }
-
-        function getSubset() {
-            const g = document.getElementById('groupSelect').value;
-            return g === 'ALL' ? raw : raw.filter(d => d.group === g);
-        }
-
-        function draw() {
-            const data = getSubset();
-            const xVar = document.getElementById('xSelect').value;
-            const yVar = document.getElementById('ySelect').value;
-
-            const trace = {
-                x: data.map(d => +d[xVar]),
-                y: data.map(d => +d[yVar]),
-                mode: 'markers',
-                type: 'scatter',
-                marker: { size: 8, color: '#004a6f', opacity: 0.7 },
-                text: data.map(d => `id: ${d.id}, group: ${d.group}`)
-            };
-            const layout = {
-                margin: { t: 20, r: 20, b: 40, l: 50 },
-                xaxis: { title: xVar },
-                yaxis: { title: yVar },
-                hovermode: 'closest',
-                height: 400,
-                plot_bgcolor: 'rgba(255,255,255,0)',
-                paper_bgcolor: 'rgba(255,255,255,0)'
-            };
-
-            Plotly.newPlot("plot", [trace], layout, { displayModeBar: true, responsive: true });
-        }
-
-        //redraw when control kthings change
-        ['groupSelect', 'xSelect', 'ySelect'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.addEventListener('change', draw);
-        });
-
-        loadData();
-*/
-
-        // JS to highlight current page
-        const path = location.pathname.split('/').pop() || 'index.html';
-        document.querySelectorAll('a[href]').forEach(a => {
-            if (a.getAttribute('href') === path) {
-                a.classList.add('ring-2', 'ring-[#004a6f]', 'border-[#004a6f]');
-            }
-        });
-
+        document.addEventListener('DOMContentLoaded', loadResults);
     </script>
+
 </body>
 
 </html>

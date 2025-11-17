@@ -15,7 +15,18 @@
     <!-- Fixed top bar for all pages -->
     <header class="fixed inset-x-0 top-0 z-50 bg-[#004a6f]">
         <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-between">
-            <img src="ukhd_logo.jpg" alt="logo" class="h-8 w-auto bg-white/70 backdrop-blur shadow-sm select-none" />
+            <div class="flex items-center gap-3">
+                <!-- Mobile menu button (hamburger) -->
+                <button id="mobile-nav-toggle" type="button"
+                    class="sm:hidden inline-flex items-center justify-center p-2 rounded-md bg-white/80 text-[#004a6f] shadow">
+                    <span class="sr-only">Open navigation</span>
+                    <span class="block w-5 h-[2px] bg-[#004a6f] mb-[4px]"></span>
+                    <span class="block w-5 h-[2px] bg-[#004a6f] mb-[4px]"></span>
+                    <span class="block w-5 h-[2px] bg-[#004a6f]"></span>
+                </button>
+                <img src="ukhd_logo.jpg" alt="logo"
+                    class="h-8 w-auto bg-white/70 backdrop-blur shadow-sm select-none" />
+            </div>
             <span
                 class="rounded-xl bg-white/70 backdrop-blur px-3 py-1 text-xs font-medium shadow-sm select-none text-center">
                 ENG
@@ -52,7 +63,7 @@
                 class="col-span-8 sm:col-span-9 md:col-span-10 rounded-xl bg-white/40 backdrop-blur border border-gray-500 mt-6 mx-6 shadow-sm">
                 <h2 class="text-4xl font-medium leading-tight text-[#004a6f] drop-shadow px-4">Sources:</h2>
                 <h4 class="text-[#004a6f] font-medium drop-shadow px-4"><br>References:</h4>
-                <p class ="text-gray-800 leading-relaxed px-8">here go the important papers for data/pipeline/etc.</p>
+                <p class="text-gray-800 leading-relaxed px-8">here go the important papers for data/pipeline/etc.</p>
             </section>
         </div>
 
@@ -61,6 +72,31 @@
             © <span id="year"></span> Summary Association Statistics
         </footer>
     </main>
+
+    <!-- Mobile nav overlay & drawer -->
+    <div id="mobile-nav" class="sm:hidden fixed inset-0 z-40 bg-black/40 hidden">
+        <!-- Slide-in panel -->
+        <div class="absolute left-0 top-0 bottom-0 w-64 bg-white/95 shadow-xl p-4 flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+                <span class="font-semibold text-[#004a6f] text-lg">Menu</span>
+                <button id="mobile-nav-close" type="button" class="p-1 rounded-md text-gray-600 hover:bg-gray-100">
+                    ✕
+                </button>
+            </div>
+            <ul class="space-y-3">
+                <li><a class="block text-left px-3 py-2 rounded-lg border border-gray-300 bg-white/80 hover:bg-white"
+                        href="index.html">Home</a></li>
+                <li><a class="block text-left px-3 py-2 rounded-lg border border-gray-300 bg-white/80 hover:bg-white"
+                        href="data.html">Data</a></li>
+                <li><a class="block text-left px-3 py-2 rounded-lg border border-gray-300 bg-white/80 hover:bg-white"
+                        href="sources.html">Sources</a></li>
+                <li><a class="block text-left px-3 py-2 rounded-lg border border-gray-300 bg-white/80 hover:bg-white"
+                        href="contact.html">Contact</a></li>
+                <li><a class="block text-left px-3 py-2 rounded-lg border border-gray-300 bg-white/80 hover:bg-white"
+                        href="about.html">About</a></li>
+            </ul>
+        </div>
+    </div>
 
     <!-- JS to highlight current page -->
     <script>
@@ -71,6 +107,37 @@
                 a.classList.add('ring-2', 'ring-[#004a6f]', 'border-[#004a6f]');
             }
         });
+
+        // Mobile nav toggle
+        const mobileNav = document.getElementById('mobile-nav');
+        const openBtn = document.getElementById('mobile-nav-toggle');
+        const closeBtn = document.getElementById('mobile-nav-close');
+
+        if (mobileNav && openBtn && closeBtn) {
+            function openNav() {
+                mobileNav.classList.remove('hidden');
+            }
+
+            function closeNav() {
+                mobileNav.classList.add('hidden');
+            }
+
+            openBtn.addEventListener('click', openNav);
+            closeBtn.addEventListener('click', closeNav);
+
+            // close when clicking outside the drawer
+            mobileNav.addEventListener('click', (e) => {
+                if (e.target === mobileNav) {
+                    closeNav();
+                }
+            });
+
+            // close after clicking a link in mobile menu
+            mobileNav.querySelectorAll('a[href]').forEach(a => {
+                a.addEventListener('click', closeNav);
+            });
+        }
+
     </script>
 </body>
 

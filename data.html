@@ -50,6 +50,83 @@
 
                 <div class="p-6 grid gap-6">
                     <div id="statsCards" class="grid gap-4 sm:grid-cols-3"></div>
+
+                    <!-- statistics table -> things to choose -->
+                    <div class="rounded-xl border border-gray-300 bg-white/70 backdrop-blur p-4">
+                        <div class="flex flex-wrap items-start gap-3 gap-x-6">
+                            <div>
+                                <label class="block text-xs text-gray-700 mb-1">Trait: </label>
+                                <select id="f-trait"
+                                    class="px-3 py-2 border rounded-lg bg-white/80 min-w-[12rem]"></select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-700 mb-1">Subtrait: </label>
+                                <select id="f-subtrait"
+                                    class="px-3 py-2 border rounded-lg bg-white/80 min-w-[12rem]"></select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-700 mb-1">Publication: </label>
+                                <select id="f-publication"
+                                    class="px-3 py-2 border rounded-lg bg-white/80 min-w-[12rem]"></select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-700 mb-1">Ancestry: </label>
+                                <select id="f-ancestry"
+                                    class="px-3 py-2 border rounded-lg bg-white/80 min-w-[10rem]"></select>
+                            </div>
+                            <div class="min-w-[12rem]">
+                                <label class="block text-xs text-gray-700 mb-1">P-value threshold: </label>
+                                <input id="f-pval" type="text" value="all"
+                                    class="px-3 py-2 border rounded-lg bg-white/70 w-40" placeholder="e.g. 0.05" />
+                                <div class="flex gap-1 mt-1 flex-wrap">
+                                    <button data-p="0.05" class="qbtn px-2 py-1 text-xs border rounded-lg">0.05</button>
+                                    <button data-p="0.01" class="qbtn px-2 py-1 text-xs border rounded-lg">0.01</button>
+                                    <button data-p="0.001"
+                                        class="qbtn px-2 py-1 text-xs border rounded-lg">0.001</button>
+                                    <button data-p="0.0001"
+                                        class="qbtn px-2 py-1 text-xs border rounded-lg">0.0001</button>
+                                    <button data-p="all" class="qbtn px-2 py-1 text-xs border rounded-lg">All</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- choose columns-->
+                        <div class="flex items-start gap-2 self-start mt-1">
+                            <div class="relative">
+                                <button id="colpick-toggle" class="px-3 py-2 border rounded-lg bg-white/70">Select
+                                    columns</button>
+                                <div id="colpick"
+                                    class="absolute right-0 mt-2 w-64 bg-white border rounded-xl shadow-lg p-3 hidden max-h-64 overflow-auto">
+                                </div>
+                            </div>
+                            <button id="download-btn"
+                                class="px-3 py-2 rounded-lg bg-[#004a6f] text-white shadow-sm">Download CSV</button>
+                        </div>
+                    </div>
+
+                    <!-- create table-->
+                    <div class="mt-4 border rounded-xl overflow-hidden">
+                        <div class="max-h-[420px] overflow-auto">
+                            <table class="min-w-full text-sm" id="stats-table">
+                                <thead class="sticky top-0 bg-white/80 backdrop-blur">
+                                    <tr id="table-head"></tr>
+                                </thead>
+                                <tbody id="table-body" class="divide-y"></tbody>
+                            </table>
+                        </div>
+                        <div class="flex justify-between items-center px-3 py-2 text-xs">
+                            <div id="table-status" class="text-gray-600"></div>
+                            <div class="flex items-center gap-2">
+                                <button id="prev-page" class="px-2 py-1 border rounded-lg">Previous</button>
+                                <span id="page-label"></span>
+                                <button id="next-page" class="px-2 py-1 border rounded-lg">Next</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- plots (for now)-->
+                <!--
                     <div>
                         <h3 class="text-xl font-semibold text-[#004a6f] mb-2">Manhattan</h3>
                         <div id="manhattan-plot" class="rounded-xl border border-gray-300 bg-white/70 backdrop-blur">
@@ -79,8 +156,9 @@
                         <div id="pval-top10-plot" class="rounded-xl border border-gray-300 bg-white/70 backdrop-blur">
                         </div>
                     </div>
-                </div>
-            </section>
+                    -->
+        </div>
+        </section>
         </div>
 
         <!-- Footer -->
@@ -96,51 +174,101 @@
         let RES = null;
         let RAW = []; // normalized SNP rows
 
+        // table state 
+        const TABLE = {
+            page: 1,
+            perPage: 10,
+            cols: [],
+            visibleCols: new Set(),
+            filtered: [],
+        };
+
+        //column definitions
+        const ALL_COLS = [
+            { key: 'SNP', label: 'SNP', get: r => r.SNP ?? '' },
+            { key: 'chr', label: 'Chromosome', get: r => r.chr ?? '' },
+            { key: 'position', label: 'Position', get: r => r.position ?? '' },
+            { key: 'effect_allele', label: 'Effect Allele', get: r => r.A1 ?? '' },
+            { key: 'maf', label: 'MAF', get: r => asNum(r.MAF, 3) },
+            { key: 'beta', label: 'Beta', get: r => asNum(r.Beta, 4) },
+            { key: 'sd', label: 'Std Error', get: r => asNum(r.Std_Error, 4) },
+            { key: 'or', label: 'Odds Ratio', get: r => asNum(r.OR, 4) },
+            { key: 'p', label: 'p-value', get: r => asP(r.p, 4) },
+            { key: 'n', label: 'Sample Size', get: r => r.N ?? r.sample_size ?? '' },
+            { key: 'trait', label: 'Trait', get: r => r.trait ?? '' },
+            { key: 'subtrait', label: 'Subtrait', get: r => r.subtrait ?? '' },
+            { key: 'publication', label: 'Publication', get: r => r.publication ?? '' },
+            { key: 'ancestry', label: 'Ancestry', get: r => r.ancestry ?? '' },
+        ];
+
+        function asNum(v, digits) {
+            return (v != null && isFinite(v)) ? Number(v).toFixed(digits) : '';
+        }
+        function asP(p) {
+            return (p != null && isFinite(p)) ? (p < 0.001 ? p.toExponential(2) : Number(p).toFixed(4)) : '';
+        }
+
         async function loadResults() {
             try {
-                const url = 'assets/MA_results_fish1011.json'; // make sure path & case match
+                const url = 'assets/MA_results_fish1011.json';
                 const res = await fetch(url, { cache: 'no-store' });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 RES = await res.json();
 
-                // ---- find the primary table ----
-                // Supports: {results:[...]}, {manhattan:[...]}, {manhatten:[...]}, or a plain array
+                // Example:
+                // "SNP": "rs1019444",
+                // "A1": "T",
+                // "MAF": 0.3262,
+                // "Beta": 0.0313,
+                // "Std_Error": 0.0897,
+                // "OR": 1.0318,
+                // "CI_low": 0.8654,
+                // "CI_high": 1.2305,
+                // "p_value": 0.7269,
+                // "chr": 5,
+                // "position": 165083282
+
                 const table =
                     (Array.isArray(RES) && RES) ||
                     RES.results ||
                     RES.manhattan ||
-                    RES.manhatten ||
                     [];
 
                 console.log('Loaded JSON keys:', Array.isArray(RES) ? ['<array>'] : Object.keys(RES));
                 console.log('Primary table length:', table.length);
                 if (!Array.isArray(table) || table.length === 0) {
-                    console.warn('No rows found in results/manhattan/manhatten/top-level array.');
+                    console.warn('No rows found in results/manhattan/top-level array.');
                 }
 
                 // ---- normalize into RAW ----
                 RAW = table.map(d => {
-                    const p = d.p_value ?? d.pval ?? d.p;       // accept different p-field names
-                    const chr = d.chr ?? d.chrom ?? d.chromosome;
+                    const p = d.p_value ?? d.p;
+                    const chr = d.chr;
                     const pos = d.position ?? d.pos;
                     return {
-                        SNP: d.SNP ?? null,
+                        SNP: d.SNP ?? d.rsid ?? null,
                         chr: chr != null ? String(chr) : '',
                         position: Number(pos),
                         p: Number(p),
                         posCum: Number.isFinite(d.pos_cum) ? Number(d.pos_cum) : null,
                         neglog: Number.isFinite(d.neglog10p) ? Number(d.neglog10p) : null,
-                        MAF: (d.MAF != null ? Number(d.MAF) : null),
+                        MAF: (d.MAF != null ? Number(d.MAF) : (d.maf != null ? Number(d.maf) : null)),
                         OR: (d.OR != null ? Number(d.OR) : null),
-                        CI_low: (d.CI_low != null ? Number(d.CI_low) : null),
-                        CI_high: (d.CI_high != null ? Number(d.CI_high) : null)
+                        Beta: (d.Beta != null ? Number(d.Beta) : (d.beta != null ? Number(d.beta) : null)),
+                        Std_Error: (d.Std_Error != null ? Number(d.Std_Error) : (d.SE ?? d.se ?? d.std_error ?? null)),
+                        N: d.N ?? d.sample_size ?? null,
+                        effect_allele: d.effect_allele ?? d.A1 ?? null,
+                        trait: d.trait ?? null,
+                        subtrait: d.subtrait ?? null,
+                        publication: d.publication ?? null,
+                        ancestry: d.ancestry ?? null,
                     };
                 }).filter(r => r.chr && Number.isFinite(r.position) && Number.isFinite(r.p));
 
                 console.log('Usable rows after normalization:', RAW.length);
                 if (!RAW.length) throw new Error('No usable rows (missing chr/position/p).');
 
-                // ---- compute helpers if needed ----
+                // --helpers if needed ----
                 if (RAW.some(r => r.posCum == null)) {
                     const chrOrder = Array.from(new Set(RAW.map(r => r.chr))).sort(naturalChrSort);
                     const maxPerChr = new Map(chrOrder.map(c => [c, Math.max(...RAW.filter(r => r.chr === c).map(r => r.position))]));
@@ -167,14 +295,25 @@
                         median_maf: medMAF
                     };
                 }
+                //init table columns
+                TABLE.cols = ALL_COLS;
+                TABLE.visibleCols = new Set(ALL_COLS.map(c => c.key));
+                buildColumnPicker();
+
+                //build filters + render
+                buildFilters();
+                applyFilters();
 
                 renderAllPlots();
+
             } catch (error) {
                 console.error('Failed to load/parse results JSON:', error);
                 ['manhattan-plot', 'qq-plot', 'maf-plot', 'effect-plot', 'pval-top10-plot'].forEach(id => {
                     const plot = document.getElementById(id);
                     if (plot) plot.innerHTML = '<div class="p-4 text-red-800">Failed to load data.</div>';
                 });
+                const tb = document.getElementById('table-body');
+                if (tb) tb.innerHTML = '<tr><td class = "p-3 text-red-800">Failed to load (table) data.</td></tr>';
             }
         }
 
@@ -249,6 +388,143 @@
             };
             return toKey(a) - toKey(b);
         }
+
+        //filters ? table:
+        function uniq(list) { return Array.from(new Set(list.filter(Boolean))).sort((a, b) => String(a).localeCompare(String(b))); }
+
+        function buildFilters() {
+            const fx = document.getElementById('f-trait');
+            const fs = document.getElementById('f-subtrait');
+            const fp = document.getElementById('f-publication');
+            const fa = document.getElementById('f-ancestry');
+
+            const traits = uniq(RAW.map(r => r.trait ?? r.trait_group));
+            const subtraits = uniq(RAW.map(r => r.subtrait ?? r.trait));
+            const pubs = uniq(RAW.map(r => r.publication ?? r.study));
+            const ancestries = uniq(RAW.map(r => r.ancestry));
+
+            function fill(sel, items, label) {
+                sel.innerHTML = `<option value="">All ${label}</option>` + items.map(v => `<option>${escapeHtml(v)}</option>`).join('');
+                sel.addEventListener('change', () => { TABLE.page = 1; applyFilters(); });
+            }
+
+            fill(fx, traits, 'traits');
+            fill(fs, subtraits, 'subtraits');
+            fill(fp, pubs, 'publications');
+            fill(fa, ancestries, 'ancestries');
+            if (!ancestries.length) { fa.disabled = true; fa.title = 'No ancestry data available'; }
+
+            document.querySelectorAll('.qbtn').forEach(btn => btn.addEventListener('click', () => {
+                document.getElementById('f-pval').value = btn.dataset.p;
+                TABLE.page = 1; applyFilters();
+            }));
+
+            document.getElementById('f-pval').addEventListener('input', () => { TABLE.page = 1; applyFilters(); });
+
+            document.getElementById('prev-page').addEventListener('click', () => { if (TABLE.page > 1) { TABLE.page--; renderTable(); } });
+            document.getElementById('next-page').addEventListener('click', () => { const maxPage = Math.max(1, Math.ceil(TABLE.filtered.length / TABLE.perPage)); if (TABLE.page < maxPage) { TABLE.page++; renderTable(); } });
+
+            document.getElementById('download-btn').addEventListener('click', downloadCSV);
+
+            // Column picker toggle
+            document.getElementById('colpick-toggle').addEventListener('click', () => {
+                document.getElementById('colpick').classList.toggle('hidden');
+            });
+            document.addEventListener('click', (e) => {
+                const p = document.getElementById('colpick');
+                const b = document.getElementById('colpick-toggle');
+                if (!p.contains(e.target) && !b.contains(e.target)) p.classList.add('hidden');
+            });
+        }
+
+        function applyFilters() {
+            const fx = document.getElementById('f-trait').value;
+            const fs = document.getElementById('f-subtrait').value;
+            const fp = document.getElementById('f-publication').value;
+            const fa = document.getElementById('f-ancestry').value;
+            const pmaxRaw = document.getElementById('f-pval').value.trim();
+            const pmax = parseSci(pmaxRaw);
+
+            TABLE.filtered = RAW.filter(r => {
+                if (fx && (r.trait ?? r.trait_group) !== fx) return false;
+                if (fs && (r.subtrait ?? r.trait) !== fs) return false;
+                if (fp && (r.publication ?? r.study) !== fp) return false;
+                if (fa && (r.ancestry) !== fa) return false;
+                if (pmax != null && isFinite(pmax) && r.p > pmax) return false;
+                return true;
+            });
+
+            renderTable();
+        }
+
+        function buildColumnPicker() {
+            const host = document.getElementById('colpick');
+            host.innerHTML = TABLE.cols.map(col => `
+        <label class="flex items-center gap-2 px-1 py-1 text-sm">
+          <input type="checkbox" data-col="${col.key}" ${TABLE.visibleCols.has(col.key) ? 'checked' : ''} />
+          <span>${col.label}</span>
+        </label>
+      `).join('');
+            host.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+                chk.addEventListener('change', (e) => {
+                    const key = e.target.dataset.col;
+                    if (e.target.checked) TABLE.visibleCols.add(key); else TABLE.visibleCols.delete(key);
+                    renderTable();
+                });
+            });
+        }
+
+        function renderTable() {
+            const head = document.getElementById('table-head');
+            const body = document.getElementById('table-body');
+            const cols = TABLE.cols.filter(c => TABLE.visibleCols.has(c.key));
+            head.innerHTML = cols.map(c => `<th class="text-left font-semibold px-3 py-2 whitespace-nowrap">${c.label}</th>`).join('');
+
+            const start = (TABLE.page - 1) * TABLE.perPage;
+            const rows = TABLE.filtered.slice(start, start + TABLE.perPage);
+            body.innerHTML = rows.map(r => `
+        <tr class="odd:bg-white even:bg-gray-50/70">
+          ${cols.map(c => `<td class="px-3 py-2 whitespace-nowrap">${escapeHtml(String(c.get(r) ?? ''))}</td>`).join('')}
+        </tr>
+      `).join('');
+
+            const maxPage = Math.max(1, Math.ceil(TABLE.filtered.length / TABLE.perPage));
+            document.getElementById('page-label').textContent = `Page ${TABLE.page} / ${maxPage}`;
+            document.getElementById('table-status').textContent = `${TABLE.filtered.length.toLocaleString()} rows` + (TABLE.filtered.length !== RAW.length ? ' (filtered)' : '');
+        }
+
+        function downloadCSV() {
+            const cols = TABLE.cols.filter(c => TABLE.visibleCols.has(c.key));
+            const header = cols.map(c => csvEscape(c.label)).join(',');
+            const lines = TABLE.filtered.map(r => cols.map(c => csvEscape(c.get(r))).join(','));
+            const csv = [header, ...lines].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'summary_statistics.csv';
+            document.body.appendChild(a); a.click(); a.remove();
+        }
+
+        function csvEscape(v) {
+            if (v == null) return '';
+            const s = String(v);
+            if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+            return s;
+        }
+
+        function parseSci(txt) {
+            if (!txt) return null;
+            const t = String(txt).trim();
+            if (t.toLowerCase() === 'all') return 1;
+            const n = Number(t);
+            if (!isNaN(n)) return n;
+            // accept like 5e-8 with spaces
+            const m = t.match(/^([0-9]*\.?[0-9]+)\s*e\s*([+-]?\d+)$/i);
+            if (m) return Number(m[1]) * Math.pow(10, Number(m[2]));
+            return null;
+        }
+
+        function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[c])); }
 
         document.addEventListener('DOMContentLoaded', loadResults);
     </script>

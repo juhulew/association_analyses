@@ -18,13 +18,15 @@
         <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <!-- Mobile menu button (hamburger) -->
-                <button id="mobile-nav-toggle" type="button" class="sm:hidden px-3 py-1 rounded-md backdrop-blur bg-white/70 text-[#004a6f] font-semibold shadow text-center">
+                <button id="mobile-nav-toggle" type="button"
+                    class="sm:hidden px-3 py-1 rounded-md backdrop-blur bg-white/70 text-[#004a6f] font-semibold shadow text-center">
                     Menu
                 </button>
                 <img src="ukhd_logo.jpg" alt="logo"
                     class="h-8 w-auto bg-white/70 backdrop-blur shadow-sm select-none" />
             </div>
-            <span class="rounded-xl bg-white/70 backdrop-blur px-3 py-1 text-xs text-[#004a6f] font-medium shadow-sm select-none text-center">
+            <span
+                class="rounded-xl bg-white/70 backdrop-blur px-3 py-1 text-xs text-[#004a6f] font-medium shadow-sm select-none text-center">
                 ENG
             </span>
         </div>
@@ -63,7 +65,7 @@
                     <div id="statsCards" class="grid gap-4 sm:grid-cols-3"></div>
 
                     <!-- statistics table -> things to choose -->
-                    <div class="rounded-xl border border-gray-300 bg-white/70 backdrop-blur p-4">
+                    <div class="rounded-xl border border-gray-300 bg-white/70 backdrop-blur p-4 relative z-20">
                         <div class="flex flex-wrap items-start gap-3 gap-x-6">
                             <div>
                                 <label class="block text-xs text-gray-700 mb-1">Trait: </label>
@@ -107,7 +109,7 @@
                                 <button id="colpick-toggle" class="px-3 py-2 border rounded-lg bg-white/70">Select
                                     columns</button>
                                 <div id="colpick"
-                                    class="absolute right-0 mt-2 w-64 bg-white border rounded-xl shadow-lg p-3 hidden max-h-64 overflow-auto">
+                                    class="absolute left-0 sm: right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] bg-white border rounded-xl shadow-lg p-3 hidden max-h-64 overflow-auto z-[9999]">
                                 </div>
                             </div>
                             <button id="download-btn"
@@ -119,7 +121,7 @@
                     <div class="mt-4 border rounded-xl overflow-hidden">
                         <div class="max-h-[420px] overflow-auto">
                             <table class="min-w-full text-sm" id="stats-table">
-                                <thead class="sticky top-0 bg-white/80 backdrop-blur">
+                                <thead class="sticky top-0 z-0 bg-white/80 backdrop-blur">
                                     <tr id="table-head"></tr>
                                 </thead>
                                 <tbody id="table-body" class="divide-y"></tbody>
@@ -167,9 +169,9 @@
                         <div id="pval-top10-plot" class="rounded-xl border border-gray-300 bg-white/70 backdrop-blur">
                         </div>
                     </div>
-                    -->
-        </div>
-        </section>
+                    
+                </div>-->
+            </section>
         </div>
 
         <!-- Footer -->
@@ -226,7 +228,7 @@
             { key: 'chr', label: 'Chromosome', get: r => r.chr ?? '' },
             { key: 'position', label: 'Position', get: r => r.position ?? '' },
             { key: 'effect_allele', label: 'Effect Allele', get: r => r.A1 ?? '' },
-            { key: 'maf', label: 'MAF', get: r => asNum(r.MAF, 3) },
+            { key: 'maf', label: 'MAF', get: r => asNum(r.MAF, 4) },
             { key: 'beta', label: 'Beta', get: r => asNum(r.Beta, 4) },
             { key: 'sd', label: 'Std Error', get: r => asNum(r.Std_Error, 4) },
             { key: 'or', label: 'Odds Ratio', get: r => asNum(r.OR, 4) },
@@ -238,17 +240,21 @@
             { key: 'ancestry', label: 'Ancestry', get: r => r.ancestry ?? '' },
         ];
 
+        //converts number to fixed digits or empty string
         function asNum(v, digits) {
             return (v != null && isFinite(v)) ? Number(v).toFixed(digits) : '';
         }
+
+        //converts p-value to string with fixed digits or exponential notation
         function asP(p) {
             return (p != null && isFinite(p)) ? (p < 0.001 ? p.toExponential(2) : Number(p).toFixed(4)) : '';
         }
 
+        //load results as JSON and normalize
         async function loadResults() {
             try {
-                const url = 'assets/MA_results_fish1011.json';
-                const res = await fetch(url, { cache: 'no-store' });
+                const url = 'assets/MA_results_fish1011.json'; //todo: make universal
+                const res = await fetch(url, { cache: 'no-store' }); //always download the newest file
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 RES = await res.json();
 
@@ -265,19 +271,15 @@
                 // "chr": 5,
                 // "position": 165083282
 
-                const table =
-                    (Array.isArray(RES) && RES) ||
-                    RES.results ||
-                    RES.manhattan ||
-                    [];
-
+                const table = (Array.isArray(RES) && RES) || [];
                 console.log('Loaded JSON keys:', Array.isArray(RES) ? ['<array>'] : Object.keys(RES));
                 console.log('Primary table length:', table.length);
                 if (!Array.isArray(table) || table.length === 0) {
-                    console.warn('No rows found in results/manhattan/top-level array.');
+                    console.warn('No rows found in results/top-level array.');
                 }
 
                 // ---- normalize into RAW ----
+                //if data looks different/different files etc.
                 RAW = table.map(d => {
                     const p = d.p_value ?? d.p;
                     const chr = d.chr;

@@ -62,7 +62,6 @@
                 <h2 class="text-4xl font-medium leading-tight text-[#004a6f] drop-shadow px-6">Trying out my data:</h2>
 
                 <div class="p-6 grid gap-6">
-                    <div id="statsCards" class="grid gap-4 sm:grid-cols-3"></div>
 
                     <!-- statistics table -> things to choose -->
                     <div class="rounded-xl border border-gray-300 bg-white/70 backdrop-blur p-4 relative z-20">
@@ -93,12 +92,12 @@
                                     class="px-3 py-2 border rounded-lg bg-white/70 w-40" placeholder="e.g. 0.05" />
                                 <div class="flex gap-1 mt-1 flex-wrap">
                                     <button data-p="0.05" class="qbtn px-2 py-1 text-xs border rounded-lg">0.05</button>
+                                    <button data-p="all" class="qbtn px-2 py-1 text-xs border rounded-lg">All</button>
                                     <button data-p="0.01" class="qbtn px-2 py-1 text-xs border rounded-lg">0.01</button>
                                     <button data-p="0.001"
                                         class="qbtn px-2 py-1 text-xs border rounded-lg">0.001</button>
                                     <button data-p="0.0001"
                                         class="qbtn px-2 py-1 text-xs border rounded-lg">0.0001</button>
-                                    <button data-p="all" class="qbtn px-2 py-1 text-xs border rounded-lg">All</button>
                                 </div>
                             </div>
                         </div>
@@ -116,6 +115,10 @@
                                 class="px-3 py-2 rounded-lg bg-[#004a6f] text-white shadow-sm">Download CSV</button>
                         </div>
                     </div>
+
+                    <!-- 3 important stats (just for the looks and quick info)-->
+                    <h4 class="text-xl font-medium leading-tight text-[#004a6f] drop-shadow px-1">On one glance:</h4>
+                    <div id="statsCards" class="grid gap-4 sm:grid-cols-4"></div>
 
                     <!-- create table-->
                     <div class="mt-4 border rounded-xl overflow-hidden">
@@ -328,10 +331,21 @@
                         ? (mafVals.length % 2 ? mafVals[(mafVals.length - 1) / 2]
                             : (mafVals[mafVals.length / 2 - 1] + mafVals[mafVals.length / 2]) / 2)
                         : null;
+                    const medAbsEffect = (() => {
+                        const absEffects = RAW.map(r => {
+                            const v = r.Beta != null ? Math.abs(r.Beta) : (r.OR != null ? Math.abs(Math.log(r.OR)) : null);
+                            return (v != null && isFinite(v)) ? v : null;
+                        }).filter(Number.isFinite).sort((a, b) => a - b);
+                        if (!absEffects.length) return null;
+                        return (absEffects.length % 2
+                            ? absEffects[(absEffects.length - 1) / 2]
+                            : (absEffects[absEffects.length / 2 - 1] + absEffects[absEffects.length / 2]) / 2);
+                    })();
                     RES.stats = {
                         n_snps: RAW.length,
                         min_p: pVals.length ? Math.min(...pVals) : null,
-                        median_maf: medMAF
+                        median_maf: medMAF,
+                        median_abs_effect: medAbsEffect
                     };
                 }
                 //init table columns
@@ -369,14 +383,15 @@
             const items = [
                 { label: 'SNPs', value: s.n_snps ?? RAW.length ?? 0 },
                 { label: 'Min p', value: (s.min_p != null && isFinite(s.min_p)) ? Number(s.min_p).toExponential(2) : '—' },
-                { label: 'Median MAF', value: (s.median_maf != null) ? Number(s.median_maf).toFixed(3) : '—' }
+                { label: 'Median MAF', value: (s.median_maf != null) ? Number(s.median_maf).toFixed(3) : '—' },
+                { label: 'Median absolute effect', value: (s.median_abs_effect != null) ? Number(s.median_abs_effect).toFixed(4) : '—'}
             ];
             wrap.innerHTML = items.map(i => `
-    <div class="bg-white/70 backdrop-blur rounded-xl p-4 shadow-sm border border-gray-300 text-center">
-      <div class="text-2xl font-semibold text-[#004a6f]">${i.value}</div>
-      <div class="text-sm text-gray-700 mt-1">${i.label}</div>
-    </div>
-  `).join('');
+        <div class="bg-white/70 backdrop-blur rounded-lg p-2 shadow-sm border border-gray-300 text-center">
+            <div class="text-lg font-semibold text-[#004a6f]">${i.value}</div>
+            <div class="text-sm text-gray-700 mt-0.5">${i.label}</div>
+        </div>
+    `).join('');
         }
 
         function renderManhattan() {

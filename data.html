@@ -265,7 +265,7 @@
         //load results as JSON and normalize
         async function loadResults() {
             try {
-                const url = 'assets/full_MA_results_fish2611.json'; //todo: make universal
+                const url = 'assets/full_MA_results_fish2811.json'; //todo: make universal
                 const res = await fetch(url, { cache: 'no-store' }); //always download the newest file
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 RES = await res.json();

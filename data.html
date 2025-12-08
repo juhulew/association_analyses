@@ -265,10 +265,71 @@
         //load results as JSON and normalize
         async function loadResults() {
             try {
-                const url = 'assets/full_MA_results_fish2811.json'; //todo: make universal
-                const res = await fetch(url, { cache: 'no-store' }); //always download the newest file
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                RES = await res.json();
+                const path = 'assets/full_MA_results'; //todo: make universal
+                const extension = '.json';
+                const allRows = [];
+
+                let index = 1;
+
+                while (true) {
+                    const endNumber = String(index).padStart(2, '0');
+                    const url = `${path}${endNumber}${extension}`;
+
+                    console.log(`Loading data: ${url}`);
+
+                    let res;
+                    try {
+                        res = await fetch(url, { cache: 'no-store' }); //always download the newest file
+                    } catch (err) {
+                        console.log(`No more files found after index ${index - 1}. Stopping load.`);
+                        break;
+                    }
+
+                    if (!res.ok) {
+                        console.log(`No more files found after index ${index - 1}. Stopping load. Status: ${res.status} `);
+                        break;
+                    }
+
+                    const json = await res.json();
+                    const table = (Array.isArray(json) && json) || [];
+                    console.log('Loaded from ' + url + ', rows:', table.length);
+
+                    table.forEach(d => {
+                        const p = d.p_value ?? d.p;
+                        const chr = d.chr;
+                        const pos = d.position ?? d.pos;
+                        const row = {
+                            SNP: d.SNP ?? d.rsid ?? null,
+                            trait: d.trait ?? null,
+                            subtrait: d.sub_trait ?? null,
+                            effect_allele: d.effect_allele ?? d.A1 ?? null,
+                            non_effect_allele: d.non_effect_allele ?? d.A2 ?? null,
+                            chr: chr != null ? String(chr) : '',
+                            position: Number(pos),
+                            Beta: (d.Beta != null ? Number(d.Beta) : (d.beta != null ? Number(d.beta) : null)),
+                            Std_Error: (d.Std_Error != null ? Number(d.Std_Error) : (d.SE ?? d.se ?? d.std_error ?? null)),
+                            OR: (d.OR != null ? Number(d.OR) : null),
+                            p: Number(p),
+                            original_sample_size: d.N ?? d.original_sample_size ?? null,
+                            original_nsnp: d.original_nsnp ?? d.Nsnp ?? null,
+                            //posCum: Number.isFinite(d.pos_cum) ? Number(d.pos_cum) : null,
+                            //neglog: Number.isFinite(d.neglog10p) ? Number(d.neglog10p) : null,
+                            MAF: (d.MAF != null ? Number(d.MAF) : (d.maf != null ? Number(d.maf) : null)),
+                            author: d.author ?? null,
+                            year: d.year ?? null,
+                            gwas_id: d.gwas_id ?? null,
+                            //ancestry: d.ancestry ?? null,
+                            source: url,
+                        };
+
+                        if (row.chr && Number.isFinite(row.position) && Number.isFinite(row.p)) {
+                            allRows.push(row);
+                        }
+
+                    });
+
+                    index++;
+                }
 
                 // Example:
                 //     "SNP": "rs10061973",
@@ -290,77 +351,54 @@
                 //     "year": 2018,
                 //     "gwas_id": "ukb-b-2209"
 
-                const table = (Array.isArray(RES) && RES) || [];
-                console.log('Loaded JSON keys:', Array.isArray(RES) ? ['<array>'] : Object.keys(RES));
-                console.log('Primary table length:', table.length);
-                if (!Array.isArray(table) || table.length === 0) {
-                    console.warn('No rows found in results/top-level array.');
-                }
+                RAW = allRows;
+                console.log('total rows usable after loading all files:', RAW.length);
 
-                // ---- normalize into RAW ----
-                //if data looks different/different files etc.
-                RAW = table.map(d => {
-                    const p = d.p_value ?? d.p;
-                    const chr = d.chr;
-                    const pos = d.position ?? d.pos;
-                    return {
-                        SNP: d.SNP ?? d.rsid ?? null,
-                        effect_allele: d.effect_allele ?? d.A1 ?? null,
-                        non_effect_allele: d.non_effect_allele ?? d.A2 ?? null,
-                        trait: d.trait ?? null,
-                        subtrait: d.sub_trait ?? null,
-                        chr: chr != null ? String(chr) : '',
-                        position: Number(pos),
-                        MAF: (d.MAF != null ? Number(d.MAF) : (d.maf != null ? Number(d.maf) : null)),
-                        Beta: (d.Beta != null ? Number(d.Beta) : (d.beta != null ? Number(d.beta) : null)),
-                        Std_Error: (d.Std_Error != null ? Number(d.Std_Error) : (d.SE ?? d.se ?? d.std_error ?? null)),
-                        OR: (d.OR != null ? Number(d.OR) : null),
-                        p: Number(p),
-                        original_sample_size: d.N ?? d.original_sample_size ?? null,
-                        original_nsnp: d.original_nsnp ?? d.Nsnp ?? null,
-                        posCum: Number.isFinite(d.pos_cum) ? Number(d.pos_cum) : null,
-                        neglog: Number.isFinite(d.neglog10p) ? Number(d.neglog10p) : null,
-                        author: d.author ?? null,
-                        year: d.year ?? null,
-                        gwas_id: d.gwas_id ?? null,
-                        ancestry: d.ancestry ?? null,
-                    };
-                }).filter(r => r.chr && Number.isFinite(r.position) && Number.isFinite(r.p));
-
-                console.log('Usable rows after normalization:', RAW.length);
-                if (!RAW.length) throw new Error('No usable rows (missing chr/position/p).');
-
-                // --helpers if needed ----
+                // ---- helpers if needed ----
                 if (RAW.some(r => r.posCum == null)) {
                     const chrOrder = Array.from(new Set(RAW.map(r => r.chr))).sort(naturalChrSort);
-                    const maxPerChr = new Map(chrOrder.map(c => [c, Math.max(...RAW.filter(r => r.chr === c).map(r => r.position))]));
+                    const maxPerChr = new Map(
+                        chrOrder.map(c => [c, Math.max(...RAW.filter(r => r.chr === c).map(r => r.position))])
+                    );
                     let offset = 0;
                     const chrOffset = new Map();
                     chrOrder.forEach(c => { chrOffset.set(c, offset); offset += maxPerChr.get(c) || 0; });
                     RAW.forEach(r => { if (r.posCum == null) r.posCum = (chrOffset.get(r.chr) || 0) + r.position; });
                 }
                 if (RAW.some(r => r.neglog == null)) {
-                    RAW.forEach(r => { if (r.neglog == null && r.p > 0 && r.p <= 1) r.neglog = -Math.log10(r.p); });
+                    RAW.forEach(r => {
+                        if (r.neglog == null && r.p > 0 && r.p <= 1) r.neglog = -Math.log10(r.p);
+                    });
                 }
 
-                // ---- fallback stats if missing ----
+                // check if RES exists
+                if (!RES || typeof RES !== 'object') {
+                    RES = {};
+                }
+
+                // initial stats
                 if (!RES.stats) {
                     const pVals = RAW.map(r => r.p).filter(Number.isFinite);
                     const mafVals = RAW.map(r => r.MAF).filter(Number.isFinite).sort((a, b) => a - b);
                     const medMAF = mafVals.length
-                        ? (mafVals.length % 2 ? mafVals[(mafVals.length - 1) / 2]
+                        ? (mafVals.length % 2
+                            ? mafVals[(mafVals.length - 1) / 2]          // median
                             : (mafVals[mafVals.length / 2 - 1] + mafVals[mafVals.length / 2]) / 2)
                         : null;
-                    const medAbsEffect = (() => {
-                        const absEffects = RAW.map(r => {
-                            const v = r.Beta != null ? Math.abs(r.Beta) : (r.OR != null ? Math.abs(Math.log(r.OR)) : null);
-                            return (v != null && isFinite(v)) ? v : null;
-                        }).filter(Number.isFinite).sort((a, b) => a - b);
-                        if (!absEffects.length) return null;
-                        return (absEffects.length % 2
+
+                    const absEffects = RAW.map(r => {
+                        const v = r.Beta != null
+                            ? Math.abs(r.Beta)
+                            : (r.OR != null ? Math.abs(Math.log(r.OR)) : null);
+                        return (v != null && isFinite(v)) ? v : null;
+                    }).filter(Number.isFinite).sort((a, b) => a - b);
+
+                    const medAbsEffect = absEffects.length
+                        ? (absEffects.length % 2
                             ? absEffects[(absEffects.length - 1) / 2]
-                            : (absEffects[absEffects.length / 2 - 1] + absEffects[absEffects.length / 2]) / 2);
-                    })();
+                            : (absEffects[absEffects.length / 2 - 1] + absEffects[absEffects.length / 2]) / 2)
+                        : null;
+
                     RES.stats = {
                         n_snps: RAW.length,
                         min_p: pVals.length ? Math.min(...pVals) : null,
@@ -368,6 +406,7 @@
                         median_abs_effect: medAbsEffect
                     };
                 }
+
                 //init table columns
                 TABLE.cols = ALL_COLS;
                 TABLE.visibleCols = new Set(ALL_COLS.map(c => c.key));
@@ -376,7 +415,6 @@
                 //build filters + render
                 buildFilters();
                 applyFilters();
-
                 renderAllPlots();
 
             } catch (error) {
@@ -389,6 +427,7 @@
                 if (tb) tb.innerHTML = '<tr><td class = "p-3 text-red-800">Failed to load (table) data.</td></tr>';
             }
         }
+
 
         function renderAllPlots() {
             renderStats();
@@ -454,22 +493,26 @@
                 : RAW;
             const s = computeStatsFromFilters(rows);
             const items = [
-                {   key: 'n_snps',
+                {
+                    key: 'n_snps',
                     label: 'SNPs',
                     value: s.n_snps ?? RAW.length ?? 0,
                     help: 'Number of SNP rows in the current selection (after all filters and p-value threshold).'
                 },
-                {   key: 'min_p',
+                {
+                    key: 'min_p',
                     label: 'Min p',
                     value: (s.min_p != null && isFinite(s.min_p)) ? Number(s.min_p).toExponential(2) : '—',
                     help: 'Minimum p-value in the current selection (after all filters and p-value threshold).'
                 },
-                {   key: 'median_maf',
+                {
+                    key: 'median_maf',
                     label: 'Median MAF',
                     value: (s.median_maf != null) ? Number(s.median_maf).toFixed(3) : '—',
                     help: 'Median minor allele frequency (MAF) in the current selection (after all filters and p-value threshold).'
                 },
-                {   key: 'median_abs_effect',
+                {
+                    key: 'median_abs_effect',
                     label: 'Median absolute effect',
                     value: (s.median_abs_effect != null) ? Number(s.median_abs_effect).toFixed(4) : '—',
                     help: 'Median absolute effect size (|Beta| or |log(OR)|) in the current selection (after all filters and p-value threshold).'

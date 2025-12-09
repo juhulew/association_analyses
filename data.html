@@ -233,19 +233,19 @@
         //column definitions
         const ALL_COLS = [
             { key: 'SNP', label: 'SNP', get: r => r.SNP ?? '' },
+            { key: 'trait', label: 'Trait', get: r => r.trait ?? '' },
+            { key: 'subtrait', label: 'Subtrait', get: r => r.subtrait ?? '' },
             { key: 'effect_allele', label: 'Effect Allele', get: r => r.effect_allele ?? '' },
             { key: 'non_effect_allele', label: 'Non-effect Allele', get: r => r.non_effect_allele ?? '' },
-            { key: 'trait', label: 'Trait', get: r => r.trait ?? '' }, //TODO
-            { key: 'subtrait', label: 'Subtrait', get: r => r.subtrait ?? '' },
             { key: 'chr', label: 'Chromosome', get: r => r.chr ?? '' },
             { key: 'position', label: 'Position', get: r => r.position ?? '' },
-            { key: 'maf', label: 'MAF', get: r => asNum(r.MAF, 4) },
             { key: 'beta', label: 'Beta', get: r => asNum(r.Beta, 4) },
             { key: 'sd', label: 'Std Error', get: r => asNum(r.Std_Error, 4) },
             { key: 'or', label: 'Odds Ratio', get: r => asNum(r.OR, 4) },
             { key: 'p', label: 'p-value', get: r => asP(r.p, 4) },
-            { key: 'n', label: 'Sample Size', get: r => r.N ?? r.original_sample_size ?? '' },
-            { key: 'nsnp', label: 'Number of SNPs', get: r => r.original_nsnp ?? '' },
+            { key: 'maf', label: 'MAF', get: r => asNum(r.MAF, 4) },
+            { key: 'n', label: 'Original Sample Size', get: r => r.N ?? r.original_sample_size ?? '' },
+            { key: 'nsnp', label: 'Original Number of SNPs', get: r => r.original_nsnp ?? '' },
             { key: 'author', label: 'Author', get: r => r.author ?? '' },
             { key: 'year', label: 'Year', get: r => r.year ?? '' },
             { key: 'gwas_id', label: 'GWAS ID', get: r => r.gwas_id ?? '' },
@@ -322,10 +322,10 @@
                             source: url,
                         };
 
-                        if (row.chr && Number.isFinite(row.position) && Number.isFinite(row.p)) {
-                            allRows.push(row);
-                        }
-
+                        // if (row.chr && Number.isFinite(row.position) && Number.isFinite(row.p)) {
+                        //     allRows.push(row);
+                        // }
+                        allRows.push(row);
                     });
 
                     index++;

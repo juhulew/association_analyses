@@ -262,6 +262,21 @@
             return (p != null && isFinite(p)) ? (p < 0.001 ? p.toExponential(2) : Number(p).toFixed(4)) : '';
         }
 
+        function normalizeYear(val) {
+            if (val == null) return null;
+            const num = Number(val);
+            if (!isFinite(num)) return null;
+
+            if (num > 1000 && num < 3000) return num; //already a year
+            if (num > 3000) { //if in excel format
+                const excelEpoch = new Date(Date.UTC(1899, 11, 30)); //base date from excel
+                const ms = excelEpoch.getTime() + num * 86400000; //turn days to ms
+                const date = new Date(ms);
+                return date.getUTCFullYear();
+            }
+            return num; //anything else
+        }
+
         //load results as JSON and normalize
         async function loadResults() {
             try {
@@ -295,7 +310,7 @@
                     console.log('Loaded from ' + url + ', rows:', table.length);
 
                     table.forEach(d => {
-                        const p = d.p_value ?? d.p;
+                        const p = d.eulat_p_value ?? d.p;
                         const chr = d.chr;
                         const pos = d.position ?? d.pos;
                         const row = {
@@ -306,17 +321,17 @@
                             non_effect_allele: d.non_effect_allele ?? d.A2 ?? null,
                             chr: chr != null ? String(chr) : '',
                             position: Number(pos),
-                            Beta: (d.Beta != null ? Number(d.Beta) : (d.beta != null ? Number(d.beta) : null)),
-                            Std_Error: (d.Std_Error != null ? Number(d.Std_Error) : (d.SE ?? d.se ?? d.std_error ?? null)),
-                            OR: (d.OR != null ? Number(d.OR) : null),
+                            Beta: (d.eulat_beta != null ? Number(d.eulat_beta) : (d.beta != null ? Number(d.beta) : null)),
+                            Std_Error: (d.eulat_std_error != null ? Number(d.eulat_std_error) : (d.SE ?? d.se ?? d.std_error ?? null)),
+                            OR: (d.eulat_OR != null ? Number(d.eulat_OR) : null),
                             p: Number(p),
                             original_sample_size: d.N ?? d.original_sample_size ?? null,
                             original_nsnp: d.original_nsnp ?? d.Nsnp ?? null,
                             //posCum: Number.isFinite(d.pos_cum) ? Number(d.pos_cum) : null,
                             //neglog: Number.isFinite(d.neglog10p) ? Number(d.neglog10p) : null,
-                            MAF: (d.MAF != null ? Number(d.MAF) : (d.maf != null ? Number(d.maf) : null)),
+                            MAF: (d.original_MAF != null ? Number(d.original_MAF) : (d.maf != null ? Number(d.maf) : null)),
                             author: d.author ?? null,
-                            year: d.year ?? null,
+                            year: normalizeYear(d.year),
                             gwas_id: d.gwas_id ?? null,
                             //ancestry: d.ancestry ?? null,
                             source: url,
@@ -728,6 +743,12 @@
             const m = t.match(/^([0-9]*\.?[0-9]+)\s*e\s*([+-]?\d+)$/i);
             if (m) return Number(m[1]) * Math.pow(10, Number(m[2]));
             return null;
+        }
+
+        function excelDateToReadable(date) {
+            const base = new Date(Date.UTC(1899, 11, 30)); // Excel base Windows
+            const d = new Date(base.getTime() + date * 86400000);
+            return d.getUTCFullYear();
         }
 
         function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[c])); }

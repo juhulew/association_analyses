@@ -17,7 +17,8 @@
   <header class="fixed inset-x-0 top-0 z-50 bg-[#004a6f]">
     <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-between">
       <img src="ukhd_logo.jpg" alt="logo" class="h-8 w-auto bg-white/70 backdrop-blur shadow-sm select-none" />
-      <span class="rounded-xl bg-white/70 backdrop-blur px-3 py-1 text-xs font-medium shadow-sm select-none text-center">
+      <span
+        class="rounded-xl bg-white/70 backdrop-blur px-3 py-1 text-xs font-medium shadow-sm select-none text-center">
         ENG
       </span>
     </div>
@@ -29,16 +30,27 @@
       <!-- nav Sidebar navigation -->
       <nav class="col-span-3 sm:col-span-2 md:col-span-1 mt-6">
         <ul class="space-y-3">
-          <li><a class="btn-nav block w-full text-left px-4 py-2 rounded-xl border border-gray-500 bg-white/70 backdrop-blur hover:bg-white/90 transition shadow-sm" href="index.html">Home</a></li>
-          <li><a class="btn-nav block w-full text-left px-4 py-2 rounded-xl border border-gray-500 bg-white/70 backdrop-blur hover:bg-white/90 transition shadow-sm" href="data.html">Data</a></li>
-          <li><a class="btn-nav block w-full text-left px-4 py-2 rounded-xl border border-gray-500 bg-white/70 backdrop-blur hover:bg-white/90 transition shadow-sm" href="sources.html">Sources</a></li>
-          <li><a class="btn-nav block w-full text-left px-4 py-2 rounded-xl border border-gray-500 bg-white/70 backdrop-blur hover:bg-white/90 transition shadow-sm" href="contact.html">Contact</a></li>
-          <li><a class="btn-nav block w-full text-left px-4 py-2 rounded-xl border border-gray-500 bg-white/70 backdrop-blur hover:bg-white/90 transition shadow-sm" href="about.html">About</a></li>
+          <li><a
+              class="btn-nav block w-full text-left px-4 py-2 rounded-xl border border-gray-500 bg-white/70 backdrop-blur hover:bg-white/90 transition shadow-sm"
+              href="index.html">Home</a></li>
+          <li><a
+              class="btn-nav block w-full text-left px-4 py-2 rounded-xl border border-gray-500 bg-white/70 backdrop-blur hover:bg-white/90 transition shadow-sm"
+              href="data.html">Data</a></li>
+          <li><a
+              class="btn-nav block w-full text-left px-4 py-2 rounded-xl border border-gray-500 bg-white/70 backdrop-blur hover:bg-white/90 transition shadow-sm"
+              href="sources.html">Sources</a></li>
+          <li><a
+              class="btn-nav block w-full text-left px-4 py-2 rounded-xl border border-gray-500 bg-white/70 backdrop-blur hover:bg-white/90 transition shadow-sm"
+              href="contact.html">Contact</a></li>
+          <li><a
+              class="btn-nav block w-full text-left px-4 py-2 rounded-xl border border-gray-500 bg-white/70 backdrop-blur hover:bg-white/90 transition shadow-sm"
+              href="about.html">About</a></li>
         </ul>
       </nav>
 
       <!--Pages: -->
-      <section class="col-span-8 sm:col-span-9 md:col-span-10 rounded-xl bg-white/40 backdrop-blur border border-gray-500 mt-6 mx-6 shadow-sm">
+      <section
+        class="col-span-8 sm:col-span-9 md:col-span-10 rounded-xl bg-white/40 backdrop-blur border border-gray-500 mt-6 mx-6 shadow-sm">
         <h2 class="text-4xl font-medium leading-tight text-[#004a6f] drop-shadow px-6">Trying out my data:</h2>
 
         <div class="p-6 grid gap-6">
@@ -66,7 +78,8 @@
               <div>
                 <label class="block text-xs text-gray-700 mb-1">Max p-value</label>
                 <div class="flex items-center gap-2">
-                  <input id="f-pval" type="text" value="1" class="px-3 py-2 border rounded-lg bg-white/80 w-28" placeholder="e.g. 5e-8" />
+                  <input id="f-pval" type="text" value="1" class="px-3 py-2 border rounded-lg bg-white/80 w-28"
+                    placeholder="e.g. 5e-8" />
                   <div class="flex gap-1">
                     <button data-p="5e-8" class="qbtn px-2 py-1 text-xs border rounded-lg">5e-8</button>
                     <button data-p="1e-5" class="qbtn px-2 py-1 text-xs border rounded-lg">1e-5</button>
@@ -79,9 +92,12 @@
                 <!-- Column picker -->
                 <div class="relative">
                   <button id="colpick-toggle" class="px-3 py-2 border rounded-lg bg-white/80">Select columns</button>
-                  <div id="colpick" class="absolute right-0 mt-2 w-64 bg-white border rounded-xl shadow-lg p-3 hidden max-h-64 overflow-auto"></div>
+                  <div id="colpick"
+                    class="absolute right-0 mt-2 w-64 bg-white border rounded-xl shadow-lg p-3 hidden max-h-64 overflow-auto">
+                  </div>
                 </div>
-                <button id="download-btn" class="px-3 py-2 rounded-lg bg-[#004a6f] text-white shadow-sm">Download CSV</button>
+                <button id="download-btn" class="px-3 py-2 rounded-lg bg-[#004a6f] text-white shadow-sm">Download
+                  CSV</button>
               </div>
             </div>
 
@@ -160,65 +176,126 @@
     // Column definitions (key, label, getter)
     const ALL_COLS = [
       { key: 'SNP', label: 'SNP', get: r => r.SNP ?? '' },
-      { key: 'chr', label: 'Chr', get: r => r.chr ?? '' },
-      { key: 'position', label: 'Position', get: r => r.position ?? '' },
+      { key: 'exposure', label: 'Exposure / trait', get: r => r.exposure ?? r.trait_group ?? r.trait ?? '' },
+      { key: 'subtrait', label: 'Specific trait / subtrait', get: r => r.subtrait ?? r.sub_trait ?? '' },
       { key: 'effect_allele', label: 'Effect allele', get: r => r.effect_allele ?? r.A1 ?? '' },
       { key: 'minor_allele', label: 'Minor allele', get: r => r.minor_allele ?? '' },
-      { key: 'maf', label: 'MAF', get: r => asNum(r.MAF, 3) },
-      { key: 'beta', label: 'Beta', get: r => asNum(r.Beta, 4) },
-      { key: 'se', label: 'SD / SE', get: r => asNum(r.Std_Error, 4) },
-      { key: 'or', label: 'OR', get: r => asNum(r.OR, 4) },
-      { key: 'ci', label: '95% CI', get: r => (num(r.CI_low) && num(r.CI_high)) ? `[${Number(r.CI_low).toFixed(3)}, ${Number(r.CI_high).toFixed(3)}]` : '' },
-      { key: 'p', label: 'p', get: r => asP(r.p) },
-      { key: 'n', label: 'Sample size', get: r => r.N ?? r.sample_size ?? '' },
-      { key: 'exposure', label: 'Exposure / trait', get: r => r.exposure ?? r.trait_group ?? '' },
-      { key: 'subtrait', label: 'Specific trait / subtrait', get: r => r.subtrait ?? r.trait ?? '' },
-      { key: 'publication', label: 'Publication', get: r => r.publication ?? r.study ?? '' },
-      { key: 'ancestry', label: 'Ancestry', get: r => r.ancestry ?? '' },
+      { key: 'chr', label: 'Chr', get: r => r.chr ?? '' },
+      { key: 'position', label: 'Position', get: r => r.position ?? '' },
+      { key: 'GWAS_ID', label: 'GWAS ID', get: r => r.gwas_id ?? '' },
+      { key: 'author', label: 'Author', get: r => r.author ?? '' },
+      { key: 'year', label: 'Year', get: r => r.year ?? '' },
+      { key: 'o_sample_size', label: 'Original Sample Size', get: r => r.original_sample_size ?? '' },
+      { key: 'o_ancestry', label: 'Original Ancestry', get: r => r.original_ancestry ?? '' },
+      { key: 'o_maf', label: 'MAF', get: r => asNum(r.original_MAF, 3) },
+      { key: 'o_beta', label: 'Beta', get: r => asNum(r.original_beta, 4) },
+      { key: 'o_se', label: 'Original SE', get: r => asNum(r.original_sd, 4) },
+      { key: 'o_pvalue', label: 'original p', get: r => asP(r.original_p) },
+      { key: 'eu_sample_size', label: 'Eulat Sample Size', get: r => r.eulat_sample_size ?? '' },
+      { key: 'eu_ancestry', label: 'Eulat Ancestry', get: r => r.eulat_ancestry ?? '' },
+      { key: 'eu_maf', label: 'Eulat MAF', get: r => asNum(r.eulat_MAF, 3) },
+      { key: 'eu_beta', label: 'Eulat Beta', get: r => asNum(r.eulat_beta, 4) },
+      { key: 'eu_se', label: 'Eulat SE', get: r => asNum(r.eulat_sd, 4) },
+      { key: 'eu_p', label: 'Eulat p', get: r => asP(r.eulat_p) },
     ];
 
     function asNum(v, d) { return (v != null && isFinite(v)) ? Number(v).toFixed(d) : ''; }
     function num(v) { return v != null && isFinite(v); }
     function asP(p) { return (p != null && isFinite(p)) ? (p < 0.001 ? p.toExponential(2) : Number(p).toFixed(4)) : ''; }
+    function numberify(v) { if (v == null) return null; const n = Number(v); return Number.isFinite(n) ? n : null; }
+
 
     async function loadResults() {
       try {
-        const url = 'assets/MA_results_fish1011.json';
-        const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        RES = await res.json();
+        const path = 'assets/full_MA_results';   // base path
+        const extension = '.json';
+        const allRows = [];
 
-        const table = (Array.isArray(RES) && RES) || RES.results || RES.manhattan || [];
+        let index = 1;
 
-        // ---- normalize into RAW ----
-        RAW = table.map(d => {
-          const p = d.p_value ?? d.p;
-          const chr = d.chr;
-          const pos = d.position ?? d.pos;
-          return {
-            SNP: d.SNP ?? d.rsid ?? null,
-            chr: chr != null ? String(chr) : '',
-            position: Number(pos),
-            p: Number(p),
-            posCum: Number.isFinite(d.pos_cum) ? Number(d.pos_cum) : null,
-            neglog: Number.isFinite(d.neglog10p) ? Number(d.neglog10p) : null,
-            MAF: (d.MAF != null ? Number(d.MAF) : (d.maf != null ? Number(d.maf) : null)),
-            OR: (d.OR != null ? Number(d.OR) : null),
-            CI_low: (d.CI_low != null ? Number(d.CI_low) : null),
-            CI_high: (d.CI_high != null ? Number(d.CI_high) : null),
-            Beta: (d.Beta != null ? Number(d.Beta) : (d.beta != null ? Number(d.beta) : null)),
-            Std_Error: (d.Std_Error != null ? Number(d.Std_Error) : (d.SE ?? d.se ?? null)),
-            N: d.N ?? d.sample_size ?? null,
-            effect_allele: d.effect_allele ?? d.A1 ?? null,
-            minor_allele: d.minor_allele ?? d.A2 ?? null,
-            exposure: d.exposure ?? d.trait_group ?? null,
-            subtrait: d.subtrait ?? d.trait ?? null,
-            publication: d.publication ?? d.study ?? null,
-            ancestry: d.ancestry ?? null,
-          };
-        }).filter(r => r.chr && Number.isFinite(r.position) && Number.isFinite(r.p));
+        while (true) {
+          const endNumber = String(index).padStart(2, '0');
+          const url = `${path}${endNumber}${extension}`;
 
-        // ---- compute helpers if needed ----
+          console.log(`Trying to load: ${url}`);
+
+          let res;
+          try {
+            res = await fetch(url, { cache: 'no-store' });
+          } catch (err) {
+            console.log(`Network error for ${url}, assuming no more files.`);
+            break;
+          }
+
+          if (!res.ok) {
+            console.log(`No more files found after index ${index - 1}. Stopping load. Status: ${res.status} `);
+            break;
+          }
+
+          const json = await res.json();
+          const table = Array.isArray(json) ? json : [];
+          console.log(`Loaded from ${url}, raw rows: ${table.length}`);
+
+          table.forEach(d => {
+            const original_p = d.original_p;
+            const eulat_p = d.eulat_p ?? d.eulat_p_value;;
+            const original_p_n = numberify(d.original_p);
+            const eulat_p_n = numberify(d.eulat_p ?? d.eulat_p_value); // <-- correct key
+            const p_u = Number.isFinite(original_p_n) ? original_p_n : eulat_p_n;
+            const chr = d.chr;
+            const pos = d.position ?? d.pos;
+
+            const num = v => (v == null ? null : (Number(v))); //easyer to read later
+            const isNum = v => Number.isFinite(v);
+            const row = {
+              SNP: d.SNP ?? d.rsid ?? null,
+              exposure: d.exposure ?? d.trait_group ?? null,
+              subtrait: d.subtrait ?? d.trait ?? null,
+              effect_allele: d.effect_allele ?? d.A1 ?? null,
+              minor_allele: d.non_effect_allele ?? d.minor_allele ?? d.A2 ?? null,
+              chr: chr != null ? String(chr) : '',
+              position: Number(pos),
+
+              gwas_id: d.GWAS_ID ?? d.gwas_id ?? null,
+              author: d.author ?? null,
+              year: d.year != null ? Number(d.year) : null,
+              original_sample_size: d.original_sample_size ?? d.o_sample_size ?? null,
+              original_ancestry: d.original_ancestry ?? d.o_ancestry ?? null,
+              original_MAF: numberify(d.original_MAF ?? d.o_maf),
+              original_beta: numberify(d.original_beta ?? d.o_beta),
+              original_sd: numberify(d.original_sd ?? d.o_se),
+              original_p: original_p_n,
+
+              eulat_sample_size: d.eulat_sample_size ?? d.eu_sample_size ?? null,
+              eulat_ancestry: d.eulat_ancestry ?? d.eu_ancestry ?? null,
+              eulat_MAF: numberify(d.eulat_MAF ?? d.eu_maf),
+              eulat_beta: numberify(d.eulat_beta ?? d.eu_beta),
+              eulat_sd: numberify(d.eulat_sd ?? d.eulat_std_error ?? d.eu_se),
+              eulat_p: eulat_p_n,
+
+              // convenience fields used by filters/stats
+              publication: d.publication ?? (d.author || d.year ? `${d.author ?? ''} ${d.year ?? ''}`.trim() : null),
+              ancestry: d.original_ancestry ?? d.eulat_ancestry ?? null,
+              MAF: Number.isFinite(num(d.original_MAF)) ? num(d.original_MAF) : num(d.eulat_MAF),
+              p: p_u,
+
+              posCum: d.posCum != null ? Number(d.posCum) : null, //precomputed
+              neglog: d.neglog != null ? Number(d.neglog) : null, //precomputed
+            };
+            // keep only rows with valid chr, position and p
+            allRows.push(row);
+          });
+          index++;
+        }
+
+        RAW = allRows;
+        console.log('Total usable rows after loading all files:', RAW.length);
+
+        if (!RAW.length) {
+          throw new Error('No usable rows (missing chr/position/p) across all files.');
+        }
+
+        // helpers
         if (RAW.some(r => r.posCum == null)) {
           const chrOrder = Array.from(new Set(RAW.map(r => r.chr))).sort(naturalChrSort);
           const maxPerChr = new Map(chrOrder.map(c => [c, Math.max(...RAW.filter(r => r.chr === c).map(r => r.position))]));
@@ -228,10 +305,16 @@
           RAW.forEach(r => { if (r.posCum == null) r.posCum = (chrOffset.get(r.chr) || 0) + r.position; });
         }
         if (RAW.some(r => r.neglog == null)) {
-          RAW.forEach(r => { if (r.neglog == null && r.p > 0 && r.p <= 1) r.neglog = -Math.log10(r.p); });
+          RAW.forEach(r => {
+            if (r.neglog == null && r.p > 0 && r.p <= 1) r.neglog = -Math.log10(r.p);
+          });
         }
 
-        // ---- fallback stats if missing ----
+        if (!RES || typeof RES !== 'object') {
+          RES = {};
+        }
+
+        // fallback stats
         if (!RES.stats) {
           const pVals = RAW.map(r => r.p).filter(Number.isFinite);
           const mafVals = RAW.map(r => r.MAF).filter(Number.isFinite).sort((a, b) => a - b);
@@ -239,7 +322,27 @@
             ? (mafVals.length % 2 ? mafVals[(mafVals.length - 1) / 2]
               : (mafVals[mafVals.length / 2 - 1] + mafVals[mafVals.length / 2]) / 2)
             : null;
-          RES.stats = { n_snps: RAW.length, min_p: pVals.length ? Math.min(...pVals) : null, median_maf: medMAF };
+
+          const absEffects = RAW.map(r => {
+            const v = r.Beta != null
+              ? Math.abs(r.Beta)
+              : (r.OR != null ? Math.abs(Math.log(r.OR)) : null);
+            return (v != null && isFinite(v)) ? v : null;
+          }).filter(Number.isFinite).sort((a, b) => a - b);
+
+          const medAbsEffect = absEffects.length
+            ? (absEffects.length % 2
+              ? absEffects[(absEffects.length - 1) / 2]
+              : (absEffects[absEffects.length / 2 - 1] + absEffects[absEffects.length / 2]) / 2)
+            : null;
+
+          RES.stats = {
+            n_snps: RAW.length,
+            min_p: pVals.length ? Math.min(...pVals) : null,
+            median_maf: medMAF,
+            median_abs_effect: medAbsEffect
+          };
+
         }
 
         // Init table columns (default visible)
@@ -345,7 +448,7 @@
       const fa = document.getElementById('f-ancestry');
 
       const exposures = uniq(RAW.map(r => r.exposure ?? r.trait_group));
-      const subtraits = uniq(RAW.map(r => r.subtrait ?? r.trait));
+      const subtraits = uniq(RAW.map(r => r.subtrait ?? r.trait ?? r.sub_trait));
       const pubs = uniq(RAW.map(r => r.publication ?? r.study));
       const ancestries = uniq(RAW.map(r => r.ancestry));
 
@@ -470,7 +573,7 @@
       return null;
     }
 
-    function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+    function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[c])); }
 
     document.addEventListener('DOMContentLoaded', loadResults);
   </script>

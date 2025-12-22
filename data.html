@@ -127,7 +127,7 @@
 
                     <!-- create table-->
                     <div class="mt-4 border rounded-xl overflow-hidden">
-                        <div class="max-h-[420px] overflow-auto">
+                        <div class="overflow-auto">
                             <table class="min-w-full text-sm" id="stats-table">
                                 <thead class="sticky top-0 z-0 bg-white/80 backdrop-blur">
                                     <tr id="table-head"></tr>
@@ -137,6 +137,17 @@
                         </div>
                         <div class="flex justify-between items-center px-3 py-2 text-xs">
                             <div id="table-status" class="text-gray-600"></div>
+                            <div class="flex items-center gap-2">
+                                <label class="text-gray-600">Rows:</label>
+                                <select id="per-page" class="px-2 py-1 border rounded-lg bg-white/80">
+                                    <option value="10">10</option>
+                                    <option value="20">20</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                    <option value="250">250</option>
+                                    <option value="500">500</option>
+                                </select>
+                            </div>
                             <div class="flex items-center gap-2">
                                 <button id="prev-page" class="px-2 py-1 border rounded-lg">Previous</button>
                                 <span id="page-label"></span>
@@ -230,57 +241,53 @@
             filtered: [],
         };
 
+
+        // notes:
+        // - fix filters: ancestry and p-value
+        // - maybe change filters according to already used filters e.g. only authors for selected trait etc
+
+
         //column definitions
         const ALL_COLS = [
             { key: 'SNP', label: 'SNP', get: r => r.SNP ?? '' },
-            { key: 'trait', label: 'Trait', get: r => r.trait ?? '' },
-            { key: 'subtrait', label: 'Subtrait', get: r => r.subtrait ?? '' },
-            { key: 'effect_allele', label: 'Effect Allele', get: r => r.effect_allele ?? '' },
-            { key: 'non_effect_allele', label: 'Non-effect Allele', get: r => r.non_effect_allele ?? '' },
+            { key: 'exposure', label: 'Exposure / Trait', get: r => r.trait ?? r.exposure ?? r.trait_group ?? '' },
+            { key: 'subtrait', label: 'Specific trait / Subtrait', get: r => r.sub_trait ?? r.subtrait ?? '' },
+            { key: 'effect_allele', label: 'Effect allele', get: r => r.effect_allele ?? r.A1 ?? '' },
+            { key: 'minor_allele', label: 'Minor allele', get: r => r.minor_allele ?? '' },
             { key: 'chr', label: 'Chromosome', get: r => r.chr ?? '' },
             { key: 'position', label: 'Position', get: r => r.position ?? '' },
-            { key: 'beta', label: 'Beta', get: r => asNum(r.Beta, 4) },
-            { key: 'sd', label: 'Std Error', get: r => asNum(r.Std_Error, 4) },
-            { key: 'or', label: 'Odds Ratio', get: r => asNum(r.OR, 4) },
-            { key: 'p', label: 'p-value', get: r => asP(r.p, 4) },
-            { key: 'maf', label: 'MAF', get: r => asNum(r.MAF, 4) },
-            { key: 'n', label: 'Original Sample Size', get: r => r.N ?? r.original_sample_size ?? '' },
-            { key: 'nsnp', label: 'Original Number of SNPs', get: r => r.original_nsnp ?? '' },
-            { key: 'author', label: 'Author', get: r => r.author ?? '' },
-            { key: 'year', label: 'Year', get: r => r.year ?? '' },
-            { key: 'gwas_id', label: 'GWAS ID', get: r => r.gwas_id ?? '' },
-            { key: 'ancestry', label: 'Ancestry', get: r => r.ancestry ?? '' }, //TODO
+            { key: 'GWAS_ID', label: 'Original GWAS ID', get: r => r.gwas_id ?? '' },
+            { key: 'author', label: 'Original Author', get: r => r.author ?? '' },
+            { key: 'year', label: 'Original Year', get: r => r.year ?? '' },
+            { key: 'original_sample_size', label: 'Original Sample Size', get: r => r.original_sample_size ?? '' },
+            { key: 'o_ancestry', label: 'Original Ancestry', get: r => r.original_ancestry ?? '' },
+            { key: 'o_maf', label: 'Original MAF', get: r => asNum(r.original_MAF, 3) ?? '' },
+            { key: 'o_beta', label: 'Original Beta', get: r => asNum(r.original_beta, 4) },
+            { key: 'o_se', label: 'Original SE', get: r => asNum(r.original_sd, 4) },
+            { key: 'o_pvalue', label: 'Original p-value', get: r => asP(r.original_p) },
+            { key: 'eulat_sample_size', label: 'Eulat Sample Size', get: r => r.eulat_sample_size ?? '' },
+            { key: 'eu_ancestry', label: 'Eulat Ancestry', get: r => r.eulat_ancestry ?? '' },
+            { key: 'eu_maf', label: 'Eulat MAF', get: r => asNum(r.eulat_MAF, 3) },
+            { key: 'eu_beta', label: 'Eulat Beta', get: r => asNum(r.eulat_beta, 4) },
+            { key: 'eu_se', label: 'Eulat SE', get: r => asNum(r.eulat_sd, 4) },
+            { key: 'eu_p', label: 'Eulat p-value', get: r => asP(r.eulat_p) },
         ];
 
-        //converts number to fixed digits or empty string
-        function asNum(v, digits) {
-            return (v != null && isFinite(v)) ? Number(v).toFixed(digits) : '';
-        }
+        //column separations
+        const COL_SEPARATORS_LEFT = new Set([
+            'GWAS_ID',
+            'eulat_sample_size'
+        ]);
 
-        //converts p-value to string with fixed digits or exponential notation
-        function asP(p) {
-            return (p != null && isFinite(p)) ? (p < 0.001 ? p.toExponential(2) : Number(p).toFixed(4)) : '';
-        }
+        function asNum(v, d) { return (v != null && isFinite(v)) ? Number(v).toFixed(d) : ''; }
+        function num(v) { return v != null && isFinite(v); }
+        function asP(p) { return (p != null && isFinite(p)) ? (p < 0.001 ? p.toExponential(2) : Number(p).toFixed(4)) : ''; }
+        function numberify(v) { if (v == null) return null; const n = Number(v); return Number.isFinite(n) ? n : null; }
 
-        function normalizeYear(val) {
-            if (val == null) return null;
-            const num = Number(val);
-            if (!isFinite(num)) return null;
 
-            if (num > 1000 && num < 3000) return num; //already a year
-            if (num > 3000) { //if in excel format
-                const excelEpoch = new Date(Date.UTC(1899, 11, 30)); //base date from excel
-                const ms = excelEpoch.getTime() + num * 86400000; //turn days to ms
-                const date = new Date(ms);
-                return date.getUTCFullYear();
-            }
-            return num; //anything else
-        }
-
-        //load results as JSON and normalize
         async function loadResults() {
             try {
-                const path = 'assets/full_MA_results'; //todo: make universal
+                const path = 'assets/full_MA_results';   // base path
                 const extension = '.json';
                 const allRows = [];
 
@@ -290,13 +297,13 @@
                     const endNumber = String(index).padStart(2, '0');
                     const url = `${path}${endNumber}${extension}`;
 
-                    console.log(`Loading data: ${url}`);
+                    console.log(`Trying to load: ${url}`);
 
                     let res;
                     try {
-                        res = await fetch(url, { cache: 'no-store' }); //always download the newest file
+                        res = await fetch(url, { cache: 'no-store' });
                     } catch (err) {
-                        console.log(`No more files found after index ${index - 1}. Stopping load.`);
+                        console.log(`Network error for ${url}, assuming no more files.`);
                         break;
                     }
 
@@ -306,75 +313,72 @@
                     }
 
                     const json = await res.json();
-                    const table = (Array.isArray(json) && json) || [];
-                    console.log('Loaded from ' + url + ', rows:', table.length);
+                    const table = Array.isArray(json) ? json : [];
+                    console.log(`Loaded from ${url}, raw rows: ${table.length}`);
 
                     table.forEach(d => {
-                        const p = d.eulat_p_value ?? d.p;
+                        const original_p = d.original_p;
+                        const eulat_p = d.eulat_p ?? d.eulat_p_value;;
+                        const original_p_n = numberify(d.original_p);
+                        const eulat_p_n = numberify(d.eulat_p ?? d.eulat_p_value); // <-- correct key
+                        const p_u = Number.isFinite(original_p_n) ? original_p_n : eulat_p_n;
                         const chr = d.chr;
                         const pos = d.position ?? d.pos;
+
+                        const num = v => (v == null ? null : (Number(v))); //easyer to read later
+                        const isNum = v => Number.isFinite(v);
                         const row = {
                             SNP: d.SNP ?? d.rsid ?? null,
-                            trait: d.trait ?? null,
-                            subtrait: d.sub_trait ?? null,
+                            exposure: d.exposure ?? d.trait_group ?? d.trait ?? null,
+                            subtrait: d.subtrait ?? d.sub_trait ?? null,
                             effect_allele: d.effect_allele ?? d.A1 ?? null,
-                            non_effect_allele: d.non_effect_allele ?? d.A2 ?? null,
+                            minor_allele: d.non_effect_allele ?? d.minor_allele ?? d.A2 ?? null,
                             chr: chr != null ? String(chr) : '',
                             position: Number(pos),
-                            Beta: (d.eulat_beta != null ? Number(d.eulat_beta) : (d.beta != null ? Number(d.beta) : null)),
-                            Std_Error: (d.eulat_std_error != null ? Number(d.eulat_std_error) : (d.SE ?? d.se ?? d.std_error ?? null)),
-                            OR: (d.eulat_OR != null ? Number(d.eulat_OR) : null),
-                            p: Number(p),
-                            original_sample_size: d.N ?? d.original_sample_size ?? null,
-                            original_nsnp: d.original_nsnp ?? d.Nsnp ?? null,
-                            //posCum: Number.isFinite(d.pos_cum) ? Number(d.pos_cum) : null,
-                            //neglog: Number.isFinite(d.neglog10p) ? Number(d.neglog10p) : null,
-                            MAF: (d.original_MAF != null ? Number(d.original_MAF) : (d.maf != null ? Number(d.maf) : null)),
-                            author: d.author ?? null,
-                            year: normalizeYear(d.year),
-                            gwas_id: d.gwas_id ?? null,
-                            //ancestry: d.ancestry ?? null,
-                            source: url,
-                        };
 
-                        // if (row.chr && Number.isFinite(row.position) && Number.isFinite(row.p)) {
-                        //     allRows.push(row);
-                        // }
+                            gwas_id: d.GWAS_ID ?? d.gwas_id ?? null,
+                            author: d.author ?? null,
+                            year: d.year != null ? normalizeYear(d.year) : null,
+                            original_sample_size: d.original_sample_size ?? null,
+                            original_ancestry: d.original_ancestry ?? d.o_ancestry ?? null,
+                            original_MAF: numberify(d.original_MAF ?? d.o_maf),
+                            original_beta: numberify(d.original_beta ?? d.o_beta),
+                            original_sd: numberify(d.original_sd ?? d.o_se),
+                            original_p: original_p_n,
+
+                            eulat_sample_size: d.eulat_sample_size ?? null,
+                            eulat_ancestry: d.eulat_ancestry ?? d.eu_ancestry ?? null,
+                            eulat_MAF: numberify(d.eulat_MAF ?? d.eu_maf),
+                            eulat_beta: numberify(d.eulat_beta ?? d.eu_beta),
+                            eulat_sd: numberify(d.eulat_sd ?? d.eulat_std_error ?? d.eu_se),
+                            eulat_p: eulat_p_n,
+
+                            // convenience fields used by filters/stats
+                            publication: d.publication ?? (d.author || d.year ? `${d.author ?? ''} ${d.year ?? ''}`.trim() : null),
+                            ancestry: d.original_ancestry ?? d.eulat_ancestry ?? null,
+                            MAF: Number.isFinite(num(d.original_MAF)) ? num(d.original_MAF) : num(d.eulat_MAF),
+                            p: p_u,
+
+                            posCum: d.posCum != null ? Number(d.posCum) : null, //precomputed
+                            neglog: d.neglog != null ? Number(d.neglog) : null, //precomputed
+                        };
+                        // keep only rows with valid chr, position and p
                         allRows.push(row);
                     });
-
                     index++;
                 }
 
-                // Example:
-                //     "SNP": "rs10061973",
-                //     "effect_allele": "T",
-                //     "non_effect_allele": "G",
-                //     "sub_trait": "Oily fish intake",
-                //     "chr": null,
-                //     "position": null,
-                //     "MAF": null,
-                //     "Beta": null,
-                //     "Std_Error": null,
-                //     "OR": null,
-                //     "CI_low": null,
-                //     "CI_high": null,
-                //     "p_value": null,
-                //     "original_sample_size": 460443,
-                //     "original_nsnp": 9851867,
-                //     "author": "Ben Elsworth",
-                //     "year": 2018,
-                //     "gwas_id": "ukb-b-2209"
-
                 RAW = allRows;
-                console.log('total rows usable after loading all files:', RAW.length);
+                console.log('Total usable rows after loading all files:', RAW.length);
 
-                // ---- helpers if needed ----
+                if (!RAW.length) {
+                    throw new Error('No usable rows (missing chr/position/p) across all files.');
+                }
+
+                // helpers
                 if (RAW.some(r => r.posCum == null)) {
                     const chrOrder = Array.from(new Set(RAW.map(r => r.chr))).sort(naturalChrSort);
-                    const maxPerChr = new Map(
-                        chrOrder.map(c => [c, Math.max(...RAW.filter(r => r.chr === c).map(r => r.position))])
-                    );
+                    const maxPerChr = new Map(chrOrder.map(c => [c, Math.max(...RAW.filter(r => r.chr === c).map(r => r.position))]));
                     let offset = 0;
                     const chrOffset = new Map();
                     chrOrder.forEach(c => { chrOffset.set(c, offset); offset += maxPerChr.get(c) || 0; });
@@ -386,18 +390,16 @@
                     });
                 }
 
-                // check if RES exists
                 if (!RES || typeof RES !== 'object') {
                     RES = {};
                 }
 
-                // initial stats
+                // fallback stats
                 if (!RES.stats) {
                     const pVals = RAW.map(r => r.p).filter(Number.isFinite);
                     const mafVals = RAW.map(r => r.MAF).filter(Number.isFinite).sort((a, b) => a - b);
                     const medMAF = mafVals.length
-                        ? (mafVals.length % 2
-                            ? mafVals[(mafVals.length - 1) / 2]          // median
+                        ? (mafVals.length % 2 ? mafVals[(mafVals.length - 1) / 2]
                             : (mafVals[mafVals.length / 2 - 1] + mafVals[mafVals.length / 2]) / 2)
                         : null;
 
@@ -420,6 +422,7 @@
                         median_maf: medMAF,
                         median_abs_effect: medAbsEffect
                     };
+
                 }
 
                 //init table columns
@@ -450,53 +453,56 @@
             // renderQQ(); renderMAF(); renderEffects(); renderPvalTop10();
         }
 
+        function median(sortedArray) {
+            if (!sortedArray.length) return null;
+            const mid = Math.floor(sortedArray.length / 2);
+            return (sortedArray.length % 2)
+                ? sortedArray[mid]
+                : (sortedArray[mid - 1] + sortedArray[mid]) / 2;
+        }
+
         // get all info from the rows that were selected in the filters earlier
         function computeStatsFromFilters(rows) {
             const n_snps = rows.length;
 
-            //min pvalue
-            const pVals = rows.map(r => r.p).filter(Number.isFinite);
-            const min_p = pVals.length ? Math.min(...pVals) : null;
+            //min pvalue from original and eulat
+            const o_pVals = rows.map(r => r.original_p).filter(Number.isFinite);
+            const o_min_p = o_pVals.length ? Math.min(...o_pVals) : null;
+            const o_mafVals = rows.map(r => r.original_MAF).filter(Number.isFinite).sort((a, b) => a - b);
+            const o_median_maf = median(o_mafVals);
+            const eu_pVals = rows.map(r => r.eulat_p).filter(Number.isFinite);
+            const eu_min_p = eu_pVals.length ? Math.min(...eu_pVals) : null;
+            const eu_mafVals = rows.map(r => r.eulat_MAF).filter(Number.isFinite).sort((a, b) => a - b);
+            const eu_median_maf = median(eu_mafVals);
 
-            // median MAF
-            const mafVals = rows
-                .map(r => r.MAF)
+            const o_absEffects = rows
+                .map(r => (Number.isFinite(r.original_beta) ? Math.abs(r.original_beta) : null))
                 .filter(Number.isFinite)
                 .sort((a, b) => a - b);
+            const o_median_abs_effect = median(o_absEffects);
 
-            let median_maf = null;
-            if (mafVals.length) {
-                const mid = Math.floor(mafVals.length / 2);
-                median_maf = (mafVals.length % 2)
-                    ? mafVals[mid]
-                    : (mafVals[mid - 1] + mafVals[mid]) / 2;
-            }
-
-            // median absolute effect (|Beta| or |log(OR)|)
-            const absEffects = rows
-                .map(r => {
-                    const v = r.Beta != null
-                        ? Math.abs(r.Beta)
-                        : (r.OR != null ? Math.abs(Math.log(r.OR)) : null);
-                    return (v != null && isFinite(v)) ? v : null;
-                })
+            const eu_absEffects = rows
+                .map(r => (Number.isFinite(r.eulat_beta) ? Math.abs(r.eulat_beta) : null))
                 .filter(Number.isFinite)
                 .sort((a, b) => a - b);
-
-            let median_abs_effect = null;
-            if (absEffects.length) {
-                const mid = Math.floor(absEffects.length / 2);
-                median_abs_effect = (absEffects.length % 2)
-                    ? absEffects[mid]
-                    : (absEffects[mid - 1] + absEffects[mid]) / 2;
-            }
+            const eu_median_abs_effect = median(eu_absEffects);
 
             return {
                 n_snps,
-                min_p,
-                median_maf,
-                median_abs_effect,
+                o_min_p,
+                eu_min_p,
+                o_median_maf,
+                eu_median_maf,
+                o_median_abs_effect,
+                eu_median_abs_effect,
             };
+        }
+
+        function fmtP(p) {
+            return (p != null && Number.isFinite(p)) ? (p < 0.001 ? p.toExponential(2) : Number(p).toFixed(4)) : '—';
+        }
+        function fmtN(x, d) {
+            return (x != null && Number.isFinite(x)) ? Number(x).toFixed(d) : '—';
         }
 
         function renderStats() {
@@ -512,45 +518,49 @@
                     key: 'n_snps',
                     label: 'SNPs',
                     value: s.n_snps ?? RAW.length ?? 0,
-                    help: 'Number of SNP rows in the current selection (after all filters and p-value threshold).'
+                    top: `${s.n_snps ?? 0}`,
+                    bottom: '',
+                    help: 'Number of SNP rows in the current selection (after all filters and p-value threshold) (original vs Eulat).'
                 },
                 {
                     key: 'min_p',
-                    label: 'Min p',
-                    value: (s.min_p != null && isFinite(s.min_p)) ? Number(s.min_p).toExponential(2) : '—',
-                    help: 'Minimum p-value in the current selection (after all filters and p-value threshold).'
+                    label: 'Min p-value',
+                    value: (s.o_min_p != null && isFinite(s.o_min_p)) ? Number(s.o_min_p).toExponential(2) : '—',
+                    top: `Original: ${fmtP(s.o_min_p)}`,
+                    bottom: `Eulat: ${fmtP(s.eu_min_p)}`,
+                    help: 'Minimum p-value in the current selection (after all filters and p-value threshold)( original vs Eulat).'
                 },
                 {
                     key: 'median_maf',
                     label: 'Median MAF',
-                    value: (s.median_maf != null) ? Number(s.median_maf).toFixed(3) : '—',
-                    help: 'Median minor allele frequency (MAF) in the current selection (after all filters and p-value threshold).'
+                    top: `Original: ${fmtN(s.o_median_maf, 3)}`,
+                    bottom: `Eulat: ${fmtN(s.eu_median_maf, 3)}`,
+                    value: (s.o_median_maf != null) ? Number(s.o_median_maf).toFixed(3) : '—',
+                    help: 'Median minor allele frequency (MAF) in the current selection (after all filters and p-value threshold) (original vs Eulat).'
                 },
                 {
                     key: 'median_abs_effect',
                     label: 'Median absolute effect',
-                    value: (s.median_abs_effect != null) ? Number(s.median_abs_effect).toFixed(4) : '—',
-                    help: 'Median absolute effect size (|Beta| or |log(OR)|) in the current selection (after all filters and p-value threshold).'
+                    top: `Original: ${fmtN(s.o_median_abs_effect, 4)}`,
+                    bottom: `Eulat: ${fmtN(s.eu_median_abs_effect, 4)}`,
+                    value: (s.o_median_abs_effect != null) ? Number(s.o_median_abs_effect).toFixed(4) : '—',
+                    help: 'Median absolute effect size (|Beta| or |log(OR)|) in the current selection (after all filters and p-value threshold) (original vs Eulat).'
                 }
             ];
-            wrap.innerHTML = items.map(i => `
-        <div class="bg-white/70 backdrop-blur rounded-lg p-2 shadow-sm border border-gray-300 text-center">
-            <div class="text-lg font-semibold text-[#004a6f]">${i.value}</div>
-            <div class="text-sm text-gray-700 mt-0.5 flex items-center justify-center gap-1">
-                <span>${i.label}</span>
-                <button
-                    type="button"
+            wrap.innerHTML = items.map(c => `
+        <div class="bg-white/70 backdrop-blur rounded-lg p-3 shadow-sm border border-gray-300 text-center">
+            <div class="text-sm font-semibold text-[#004a6f]">${c.top}</div>
+                 ${c.bottom ? `<div class="text-sm font-semibold text-[#004a6f] mt-1">${c.bottom}</div>` : ''}
+                <div class="text-sm text-gray-700 mt-2 flex items-center justify-center gap-1">
+                <span>${c.label}</span>
+                    <button type="button"
                     class="w-4 h-4 flex items-center justify-center rounded-full border border-gray-400 text-[10px] leading-none text-gray-600 hover:bg-gray-100"
-                    title="${i.help}"
-                >
-                    i
-                </button>
+                title="${c.help}">i</button>
+                 </div>
             </div>
-        </div>
-    `).join('');
+        `).join('');
         }
 
-        //TODO: change and render stats whenever filters are changed
 
 
         function renderManhattan() {
@@ -612,36 +622,46 @@
             const fy = document.getElementById('f-year');
             const fa = document.getElementById('f-ancestry');
 
-            // TODO: check names in file
-            const traits = uniq(RAW.map(r => r.trait ?? r.trait_group));
-            const subtraits = uniq(RAW.map(r => r.subtrait ?? r.trait));
-            const authors = uniq(RAW.map(r => r.author ?? r.study));
-            const years = uniq(RAW.map(r => r.year)).sort((a, b) => Number(a) - Number(b));
-            const ancestries = uniq(RAW.map(r => r.ancestry));
 
-            function fill(sel, items, label) {
-                sel.innerHTML = `<option value="">All ${label}</option>` + items.map(v => `<option>${escapeHtml(v)}</option>`).join('');
-                sel.addEventListener('change', () => { TABLE.page = 1; applyFilters(); });
-            }
-
-            fill(fx, traits, 'traits');
-            fill(fs, subtraits, 'subtraits');
-            fill(fauth, authors, 'authors');
-            fill(fy, years, 'years');
-            fill(fa, ancestries, 'ancestries');
-            if (!ancestries.length) { fa.disabled = true; fa.title = 'No ancestry data available'; }
-
+            [fx, fs, fauth, fy, fa].forEach(sel => {
+                if (!sel) return;
+                sel.addEventListener('change', () => {
+                    TABLE.page = 1;
+                    applyFilters();
+                });
+            });
             //pvalue buttons
             document.querySelectorAll('.qbtn').forEach(btn => btn.addEventListener('click', () => {
                 document.getElementById('f-pval').value = btn.dataset.p;
                 TABLE.page = 1; applyFilters();
             }));
 
-            document.getElementById('f-pval').addEventListener('input', () => { TABLE.page = 1; applyFilters(); });
+            // pvalue input
+            const pIn = document.getElementById('f-pval');
+            if (pIn) {
+                pIn.addEventListener('input', () => {
+                    TABLE.page = 1;
+                    applyFilters();
+                });
+            }
+            // Paging buttons
+            document.getElementById('prev-page')?.addEventListener('click', () => { if (TABLE.page > 1) { TABLE.page--; renderTable(); } });
+            document.getElementById('next-page')?.addEventListener('click', () => { const maxPage = Math.max(1, Math.ceil(TABLE.filtered.length / TABLE.perPage)); if (TABLE.page < maxPage) { TABLE.page++; renderTable(); } });
 
-            document.getElementById('prev-page').addEventListener('click', () => { if (TABLE.page > 1) { TABLE.page--; renderTable(); } });
-            document.getElementById('next-page').addEventListener('click', () => { const maxPage = Math.max(1, Math.ceil(TABLE.filtered.length / TABLE.perPage)); if (TABLE.page < maxPage) { TABLE.page++; renderTable(); } });
+            //choice of rows per page
+            const per = document.getElementById('per-page');
 
+            if (per) {
+                per.value = String(TABLE.perPage); // sync default
+                per.addEventListener('change', () => {
+                    TABLE.perPage = Number(per.value) || 10;
+                    TABLE.page = 1;
+                    renderTable();
+                    renderStats();
+                });
+            }
+
+            //download button
             document.getElementById('download-btn').addEventListener('click', downloadCSV);
 
             // Column picker toggle
@@ -653,27 +673,23 @@
                 const b = document.getElementById('colpick-toggle');
                 if (!p.contains(e.target) && !b.contains(e.target)) p.classList.add('hidden');
             });
+            updateFilterOptions();
         }
 
         function applyFilters() {
-            const fx = document.getElementById('f-trait').value;
-            const fs = document.getElementById('f-subtrait').value;
-            const fauth = document.getElementById('f-author').value;
-            const fy = document.getElementById('f-year').value;
-            const fa = document.getElementById('f-ancestry').value;
-            const pmaxRaw = document.getElementById('f-pval').value.trim();
-            const pmax = parseSci(pmaxRaw);
+            const f = getFilters();
 
             TABLE.filtered = RAW.filter(r => {
-                if (fx && (r.trait ?? r.trait_group) !== fx) return false;
-                if (fs && (r.subtrait ?? r.sub_trait) !== fs) return false;
-                if (fauth && (r.author ?? r.study) !== fauth) return false;
-                if (fy && String(r.year) !== fy) return false;
-                if (fa && (r.ancestry) !== fa) return false;
-                if (pmax != null && isFinite(pmax) && r.p > pmax) return false;
+                if (f.trait && (r.exposure ?? '') !== f.trait) return false;
+                if (f.subtrait && (r.subtrait ?? '') !== f.subtrait) return false;
+                if (f.author && (r.author ?? '') !== f.author) return false;
+                if (f.year && String(r.year ?? '') !== String(f.year)) return false;
+                if (f.ancestry && (r.ancestry ?? '') !== f.ancestry) return false;
+                if (f.pmax != null && Number.isFinite(f.pmax) && Number.isFinite(r.p) && r.p > f.pmax) return false;
                 return true;
             });
             TABLE.page = 1; //go to first page again after filtering
+            updateFilterOptions();
             renderTable();
             renderStats(); //update stats if filters are changes
         }
@@ -699,15 +715,19 @@
             const head = document.getElementById('table-head');
             const body = document.getElementById('table-body');
             const cols = TABLE.cols.filter(c => TABLE.visibleCols.has(c.key));
-            head.innerHTML = cols.map(c => `<th class="text-left font-semibold px-3 py-2 whitespace-nowrap">${c.label}</th>`).join('');
-
+            const cellClass = (key) =>
+                `text-left px-3 py-2 whitespace-nowrap` +
+                (COL_SEPARATORS_LEFT.has(key) ? ' border-l-2 border-gray-400' : '');
+            head.innerHTML = cols
+                .map(c => `<th class="${cellClass(c.key)} font-semibold bg-white/80 backdrop-blur">${c.label}</th>`)
+                .join('');
             const start = (TABLE.page - 1) * TABLE.perPage;
             const rows = TABLE.filtered.slice(start, start + TABLE.perPage);
             body.innerHTML = rows.map(r => `
-        <tr class="odd:bg-white even:bg-gray-50/70">
-          ${cols.map(c => `<td class="px-3 py-2 whitespace-nowrap">${escapeHtml(String(c.get(r) ?? ''))}</td>`).join('')}
-        </tr>
-      `).join('');
+                <tr class="odd:bg-white even:bg-gray-50/70">
+                    ${cols.map(c => `<td class="${cellClass(c.key)}">${escapeHtml(display(c.get(r)))}</td>`).join('')}
+                </tr>
+            `).join('');
 
             const maxPage = Math.max(1, Math.ceil(TABLE.filtered.length / TABLE.perPage));
             document.getElementById('page-label').textContent = `Page ${TABLE.page} / ${maxPage}`;
@@ -745,23 +765,97 @@
             return null;
         }
 
+        function display(v, dash = '—') {
+            if (v == null) return dash;
+            const s = String(v).trim();
+            return s === '' ? dash : s;
+        }
+
+        function getFilters() {
+            return {
+                trait: document.getElementById('f-trait')?.value || '',
+                subtrait: document.getElementById('f-subtrait')?.value || '',
+                author: document.getElementById('f-author')?.value || '',
+                year: document.getElementById('f-year')?.value || '',
+                ancestry: document.getElementById('f-ancestry')?.value || '',
+                pmax: parseSci(document.getElementById('f-pval')?.value?.trim() || '')
+            };
+        }
+
+        function rowsMatchingFilters(filters, excludeKey = null) {
+            return RAW.filter(r => {
+                if (excludeKey !== 'trait' && filters.trait && (r.exposure ?? '') !== filters.trait) return false;
+                if (excludeKey !== 'subtrait' && filters.subtrait && (r.subtrait ?? '') !== filters.subtrait) return false;
+                if (excludeKey !== 'author' && filters.author && (r.author ?? '') !== filters.author) return false;
+                if (excludeKey !== 'year' && filters.year && String(r.year ?? '') !== String(filters.year)) return false;
+                if (excludeKey !== 'ancestry' && filters.ancestry && (r.ancestry ?? '') !== filters.ancestry) return false;
+
+                // keep p-value threshold affecting dropdown options too (usually desired)
+                if (excludeKey !== 'pmax' && filters.pmax != null && Number.isFinite(filters.pmax) && Number.isFinite(r.p) && r.p > filters.pmax) return false;
+
+                return true;
+            });
+        }
+
+        function fillSelect(sel, values, label, keepValue = '') {
+            const opts = [`<option value="">All ${label}</option>`]
+                .concat(values.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`));
+            sel.innerHTML = opts.join('');
+            if (keepValue && values.includes(keepValue)) sel.value = keepValue;
+            else sel.value = '';
+        }
+
+        function uniqSorted(list) {
+            return Array.from(new Set(list.filter(v => v != null && String(v).trim() !== '')))
+                .map(v => String(v))
+                .sort((a, b) => a.localeCompare(b));
+        }
+
+        function updateFilterOptions() {
+            const f = getFilters();
+            const fx = document.getElementById('f-trait');
+            const fs = document.getElementById('f-subtrait');
+            const fa = document.getElementById('f-author');
+            const fy = document.getElementById('f-year');
+            const fan = document.getElementById('f-ancestry');
+            const traitRows = rowsMatchingFilters(f, 'trait');
+            const subtraitRows = rowsMatchingFilters(f, 'subtrait');
+            const authorRows = rowsMatchingFilters(f, 'author');
+            const yearRows = rowsMatchingFilters(f, 'year');
+            const ancestryRows = rowsMatchingFilters(f, 'ancestry');
+            const traits = uniqSorted(traitRows.map(r => r.exposure));
+            const subtraits = uniqSorted(subtraitRows.map(r => r.subtrait));
+            const authors = uniqSorted(authorRows.map(r => r.author));
+            const years = uniqSorted(yearRows.map(r => r.year)).sort((a, b) => Number(a) - Number(b));
+            const ancestries = uniqSorted(ancestryRows.map(r => r.ancestry));
+            fillSelect(fx, traits, 'traits', f.trait);
+            fillSelect(fs, subtraits, 'subtraits', f.subtrait);
+            fillSelect(fa, authors, 'authors', f.author);
+            fillSelect(fy, years, 'years', f.year);
+            fillSelect(fan, ancestries, 'ancestries', f.ancestry);
+        }
+
+
+        function normalizeYear(year) {
+            const n = Number(year);
+            if (!Number.isFinite(n)) return null;
+            if (n >= 1800 && n <= 2200) return Math.round(n);
+            if (n > 20000 && n < 800000) return excelDateToReadable(n);
+            return null;
+        }
         function excelDateToReadable(date) {
             const base = new Date(Date.UTC(1899, 11, 30)); // Excel base Windows
             const d = new Date(base.getTime() + date * 86400000);
             return d.getUTCFullYear();
         }
-
         function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[c])); }
-
         document.addEventListener('DOMContentLoaded', loadResults);
-
         const path = location.pathname.split('/').pop() || 'index.html';
         document.querySelectorAll('a[href]').forEach(a => {
             if (a.getAttribute('href') === path) {
                 a.classList.add('ring-2', 'ring-[#004a6f]', 'border-[#004a6f]');
             }
         });
-
         // Mobile nav toggle
         const mobileNav = document.getElementById('mobile-nav');
         const openBtn = document.getElementById('mobile-nav-toggle');

@@ -29,3 +29,24 @@ body::before {
   @apply block w-full text-left px-4 py-2 rounded-xl border border-gray-300
          bg-white/70 backdrop-blur hover:bg-white/90 transition shadow-sm;
 }
+
+/* link colors */
+.layer a:not(.btn-nav) {
+  color: #004a6f; /* primary theme blue */
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.layer a:not(.btn-nav):visited {
+  color: #5b2d8b; /* muted purple */
+}
+
+/* optional: hover + focus polish */
+.layer a:not(.btn-nav):hover {
+  color: #006fa3; /* lighter hover blue */
+}
+
+
+
+/* reusable card style */

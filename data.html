@@ -49,9 +49,6 @@
                             href="sources.html">Sources</a></li>
                     <li><a class="btn-nav block w-full text-left px-4 py-2 rounded-xl border border-gray-500 
                                   bg-white/70 backdrop-blur hover:bg-white/90 transition shadow-sm"
-                            href="contact.html">Contact</a></li>
-                    <li><a class="btn-nav block w-full text-left px-4 py-2 rounded-xl border border-gray-500 
-                                  bg-white/70 backdrop-blur hover:bg-white/90 transition shadow-sm"
                             href="about.html">About</a></li>
                 </ul>
             </nav>
@@ -172,8 +169,8 @@
                             </div>
                         </div>
                         <div>
-                            <h3 class="text-xl font-semibold text-[#004a6f] mb-2">MAF distribution</h3>
-                            <div id="maf-plot" class="rounded-xl border border-gray-300 bg-white/70 backdrop-blur">
+                            <h3 class="text-xl font-semibold text-[#004a6f] mb-2">EAF distribution</h3>
+                            <div id="eaf-plot" class="rounded-xl border border-gray-300 bg-white/70 backdrop-blur">
                             </div>
                         </div>
                     </div>
@@ -218,8 +215,6 @@
                 <li><a class="block text-left px-3 py-2 rounded-lg border border-gray-300 bg-white/80 hover:bg-white"
                         href="sources.html">Sources</a></li>
                 <li><a class="block text-left px-3 py-2 rounded-lg border border-gray-300 bg-white/80 hover:bg-white"
-                        href="contact.html">Contact</a></li>
-                <li><a class="block text-left px-3 py-2 rounded-lg border border-gray-300 bg-white/80 hover:bg-white"
                         href="about.html">About</a></li>
             </ul>
         </div>
@@ -253,7 +248,7 @@
             { key: 'exposure', label: 'Exposure / Trait', get: r => r.trait ?? r.exposure ?? r.trait_group ?? '' },
             { key: 'subtrait', label: 'Specific trait / Subtrait', get: r => r.sub_trait ?? r.subtrait ?? '' },
             { key: 'effect_allele', label: 'Effect allele', get: r => r.effect_allele ?? r.A1 ?? '' },
-            { key: 'minor_allele', label: 'Minor allele', get: r => r.minor_allele ?? '' },
+            { key: 'non_effect_allele', label: 'Non-effect allele', get: r => r.minor_allele ?? r.non_effect_allele ?? '' },
             { key: 'chr', label: 'Chromosome', get: r => r.chr ?? '' },
             { key: 'position', label: 'Position', get: r => r.position ?? '' },
             { key: 'GWAS_ID', label: 'Original GWAS ID', get: r => r.gwas_id ?? '' },
@@ -261,17 +256,51 @@
             { key: 'year', label: 'Original Year', get: r => r.year ?? '' },
             { key: 'original_sample_size', label: 'Original Sample Size', get: r => r.original_sample_size ?? '' },
             { key: 'o_ancestry', label: 'Original Ancestry', get: r => r.original_ancestry ?? '' },
-            { key: 'o_maf', label: 'Original MAF', get: r => asNum(r.original_MAF, 3) ?? '' },
+            { key: 'o_eaf', label: 'Original EAF', get: r => asNum(r.original_EAF, 3) ?? '' },
             { key: 'o_beta', label: 'Original Beta', get: r => asNum(r.original_beta, 4) },
             { key: 'o_se', label: 'Original SE', get: r => asNum(r.original_sd, 4) },
-            { key: 'o_pvalue', label: 'Original p-value', get: r => asP(r.original_p) },
+            { key: 'o_p', label: 'Original p-value', get: r => asP(r.original_p) },
+            //{ key: 'o_power', label: 'Original Power', get: r => asNum(r.original_power, 4) },
             { key: 'eulat_sample_size', label: 'Eulat Sample Size', get: r => r.eulat_sample_size ?? '' },
             { key: 'eu_ancestry', label: 'Eulat Ancestry', get: r => r.eulat_ancestry ?? '' },
-            { key: 'eu_maf', label: 'Eulat MAF', get: r => asNum(r.eulat_MAF, 3) },
+            { key: 'eu_eaf', label: 'Eulat EAF', get: r => asNum(r.eulat_EAF, 3) },
             { key: 'eu_beta', label: 'Eulat Beta', get: r => asNum(r.eulat_beta, 4) },
-            { key: 'eu_se', label: 'Eulat SE', get: r => asNum(r.eulat_sd, 4) },
+            { key: 'eu_se', label: 'Eulat SE', get: r => asNum(r.eulat_se, 4) },
             { key: 'eu_p', label: 'Eulat p-value', get: r => asP(r.eulat_p) },
+            { key: 'eu_power', label: 'Eulat Power', get: r => asNum(r.eulat_power, 4) },
         ];
+
+//TODO: add power
+
+    // "SNP": "rs973526",
+    // "trait": "fish intake",
+    // "sub_trait": "Oily fish intake",
+    // "effect_allele": "C",
+    // "non_effect_allele": "T",
+    // "chr": "1",
+    // "position": 72090710,
+    // "gwas_id": "ukb-b-2209",
+    // "author": "Ben Elsworth",
+    // "year": 2018,
+    // "original_sample_size": 460443,
+    // "original_ancestry": "mixed ancestry",
+    // "original_MAF": "-",
+    // "original_beta": -0.0115,
+    // "original_sd": 0.0019,
+    // "original_p": 2.5e-09,
+    // "original_power": 0.0519,
+    // "eulat_sample_size": 1024,
+    // "eulat_ancestry": null,
+    // "eulat_prevalence_mean": 0.4834,
+    // "eulat_EAF": 0.5015,
+    // "eulat_beta": 0.0161,
+    // "eulat_std_error": 0.0886,
+    // "eulat_SE_approx": 0.0884,
+    // "eulat_OR": 1.0162,
+    // "eulat_MDE_logOR": 0.2478,
+    // "eulat_MDE_OR": 1.2812,
+    // "eulat_p_value": 0.8558,
+    // "eulat_power": 0.0538
 
         //column separations
         const COL_SEPARATORS_LEFT = new Set([
@@ -317,13 +346,16 @@
                     console.log(`Loaded from ${url}, raw rows: ${table.length}`);
 
                     table.forEach(d => {
-                        const original_p = d.original_p;
-                        const eulat_p = d.eulat_p ?? d.eulat_p_value;;
                         const original_p_n = numberify(d.original_p);
                         const eulat_p_n = numberify(d.eulat_p ?? d.eulat_p_value); // <-- correct key
-                        const p_u = Number.isFinite(original_p_n) ? original_p_n : eulat_p_n;
                         const chr = d.chr;
                         const pos = d.position ?? d.pos;
+                        const original_power = numberify(d.original_power);
+                        const eulat_power = numberify(d.eulat_power);
+                        const p_min = Math.min(
+                            original_p_n != null ? original_p_n : Infinity,
+                            eulat_p_n != null ? eulat_p_n : Infinity
+                        );
 
                         const num = v => (v == null ? null : (Number(v))); //easyer to read later
                         const isNum = v => Number.isFinite(v);
@@ -332,7 +364,7 @@
                             exposure: d.exposure ?? d.trait_group ?? d.trait ?? null,
                             subtrait: d.subtrait ?? d.sub_trait ?? null,
                             effect_allele: d.effect_allele ?? d.A1 ?? null,
-                            minor_allele: d.non_effect_allele ?? d.minor_allele ?? d.A2 ?? null,
+                            non_effect_allele: d.non_effect_allele ?? d.minor_allele ?? d.A2 ?? null,
                             chr: chr != null ? String(chr) : '',
                             position: Number(pos),
 
@@ -341,23 +373,25 @@
                             year: d.year != null ? normalizeYear(d.year) : null,
                             original_sample_size: d.original_sample_size ?? null,
                             original_ancestry: d.original_ancestry ?? d.o_ancestry ?? null,
-                            original_MAF: numberify(d.original_MAF ?? d.o_maf),
+                            original_EAF: numberify(d.original_EAF ?? d.o_eaf),
                             original_beta: numberify(d.original_beta ?? d.o_beta),
                             original_sd: numberify(d.original_sd ?? d.o_se),
                             original_p: original_p_n,
+                            //original_power: original_power,
 
                             eulat_sample_size: d.eulat_sample_size ?? null,
                             eulat_ancestry: d.eulat_ancestry ?? d.eu_ancestry ?? null,
-                            eulat_MAF: numberify(d.eulat_MAF ?? d.eu_maf),
+                            eulat_EAF: numberify(d.eulat_EAF ?? d.eu_eaf),
                             eulat_beta: numberify(d.eulat_beta ?? d.eu_beta),
-                            eulat_sd: numberify(d.eulat_sd ?? d.eulat_std_error ?? d.eu_se),
+                            eulat_se: numberify(d.eulat_std_error ?? d.eulat_sd ?? d.eu_se),
                             eulat_p: eulat_p_n,
+                            eulat_power: eulat_power,
 
                             // convenience fields used by filters/stats
                             publication: d.publication ?? (d.author || d.year ? `${d.author ?? ''} ${d.year ?? ''}`.trim() : null),
                             ancestry: d.original_ancestry ?? d.eulat_ancestry ?? null,
-                            MAF: Number.isFinite(num(d.original_MAF)) ? num(d.original_MAF) : num(d.eulat_MAF),
-                            p: p_u,
+                            EAF: Number.isFinite(num(d.original_EAF)) ? num(d.original_EAF) : num(d.eulat_EAF),
+                            p: p_min,
 
                             posCum: d.posCum != null ? Number(d.posCum) : null, //precomputed
                             neglog: d.neglog != null ? Number(d.neglog) : null, //precomputed
@@ -397,10 +431,10 @@
                 // fallback stats
                 if (!RES.stats) {
                     const pVals = RAW.map(r => r.p).filter(Number.isFinite);
-                    const mafVals = RAW.map(r => r.MAF).filter(Number.isFinite).sort((a, b) => a - b);
-                    const medMAF = mafVals.length
-                        ? (mafVals.length % 2 ? mafVals[(mafVals.length - 1) / 2]
-                            : (mafVals[mafVals.length / 2 - 1] + mafVals[mafVals.length / 2]) / 2)
+                    const eafVals = RAW.map(r => r.EAF).filter(Number.isFinite).sort((a, b) => a - b);
+                    const medEAF = eafVals.length
+                        ? (eafVals.length % 2 ? eafVals[(eafVals.length - 1) / 2]
+                            : (eafVals[eafVals.length / 2 - 1] + eafVals[eafVals.length / 2]) / 2)
                         : null;
 
                     const absEffects = RAW.map(r => {
@@ -419,7 +453,7 @@
                     RES.stats = {
                         n_snps: RAW.length,
                         min_p: pVals.length ? Math.min(...pVals) : null,
-                        median_maf: medMAF,
+                        median_eaf: medEAF,
                         median_abs_effect: medAbsEffect
                     };
 
@@ -437,7 +471,7 @@
 
             } catch (error) {
                 console.error('Failed to load/parse results JSON:', error);
-                ['manhattan-plot', 'qq-plot', 'maf-plot', 'effect-plot', 'pval-top10-plot'].forEach(id => {
+                ['manhattan-plot', 'qq-plot', 'eaf-plot', 'effect-plot', 'pval-top10-plot'].forEach(id => {
                     const plot = document.getElementById(id);
                     if (plot) plot.innerHTML = '<div class="p-4 text-red-800">Failed to load data.</div>';
                 });
@@ -450,7 +484,7 @@
         function renderAllPlots() {
             renderStats();
             renderManhattan();
-            // renderQQ(); renderMAF(); renderEffects(); renderPvalTop10();
+            // renderQQ(); renderEAF(); renderEffects(); renderPvalTop10();
         }
 
         function median(sortedArray) {
@@ -468,12 +502,12 @@
             //min pvalue from original and eulat
             const o_pVals = rows.map(r => r.original_p).filter(Number.isFinite);
             const o_min_p = o_pVals.length ? Math.min(...o_pVals) : null;
-            const o_mafVals = rows.map(r => r.original_MAF).filter(Number.isFinite).sort((a, b) => a - b);
-            const o_median_maf = median(o_mafVals);
+            const o_eafVals = rows.map(r => r.original_EAF).filter(Number.isFinite).sort((a, b) => a - b);
+            const o_median_eaf = median(o_eafVals);
             const eu_pVals = rows.map(r => r.eulat_p).filter(Number.isFinite);
             const eu_min_p = eu_pVals.length ? Math.min(...eu_pVals) : null;
-            const eu_mafVals = rows.map(r => r.eulat_MAF).filter(Number.isFinite).sort((a, b) => a - b);
-            const eu_median_maf = median(eu_mafVals);
+            const eu_eafVals = rows.map(r => r.eulat_EAF).filter(Number.isFinite).sort((a, b) => a - b);
+            const eu_median_eaf = median(eu_eafVals);
 
             const o_absEffects = rows
                 .map(r => (Number.isFinite(r.original_beta) ? Math.abs(r.original_beta) : null))
@@ -491,8 +525,8 @@
                 n_snps,
                 o_min_p,
                 eu_min_p,
-                o_median_maf,
-                eu_median_maf,
+                o_median_eaf,
+                eu_median_eaf,
                 o_median_abs_effect,
                 eu_median_abs_effect,
             };
@@ -531,12 +565,12 @@
                     help: 'Minimum p-value in the current selection (after all filters and p-value threshold)( original vs Eulat).'
                 },
                 {
-                    key: 'median_maf',
-                    label: 'Median MAF',
-                    top: `Original: ${fmtN(s.o_median_maf, 3)}`,
-                    bottom: `Eulat: ${fmtN(s.eu_median_maf, 3)}`,
-                    value: (s.o_median_maf != null) ? Number(s.o_median_maf).toFixed(3) : '—',
-                    help: 'Median minor allele frequency (MAF) in the current selection (after all filters and p-value threshold) (original vs Eulat).'
+                    key: 'median_eaf',
+                    label: 'Median EAF',
+                    top: `Original: ${fmtN(s.o_median_eaf, 3)}`,
+                    bottom: `Eulat: ${fmtN(s.eu_median_eaf, 3)}`,
+                    value: (s.o_median_eaf != null) ? Number(s.o_median_eaf).toFixed(3) : '—',
+                    help: 'Median effect allele frequency (EAF) in the current selection (after all filters and p-value threshold) (original vs Eulat).'
                 },
                 {
                     key: 'median_abs_effect',
